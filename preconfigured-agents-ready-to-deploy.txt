@@ -1,0 +1,100 @@
+# LegitClub pre-configured assistants
+
+## Offer
+
+LegitClub provides managed AI assistants that stay available around the clock and are configured for a specific job. Each assistant has a dedicated cloud workspace, approved tools, memory, skills, schedules, and operating rules.
+
+The customer starts with a description of the work. LegitClub turns that description into a reviewable configuration and deploys the appropriate assistant environment after payment and provisioning checks.
+
+## Example presets
+
+### YouTube assistant
+
+A creator-facing assistant for channel operations:
+
+- Topic and audience research
+- Video ideas and content calendars
+- Title, description, tag, and thumbnail-brief drafts
+- Publishing checklists
+- Competitor/channel research
+- Performance review summaries
+- Recurring optimization notes
+- Sponsorship and collaboration tracking
+
+The customer connects their approved YouTube account; the assistant does not claim guaranteed views, subscribers, or rankings.
+
+### WhatsApp assistant
+
+A messaging-first assistant for personal users, creators, and small businesses:
+
+- Dedicated number where available
+- WhatsApp activation where eligible
+- SMS/phone capability where supported
+- Reminders and follow-ups
+- Calendar support
+- Research and question answering
+- Approved message drafts and replies
+- Human escalation for sensitive or consequential requests
+
+A purchased number is not automatically WhatsApp-ready. Eligibility, verification, opt-in, templates, and provider rules are checked during activation.
+
+### Business operator
+
+A LegitDesk preset for offices and professional teams:
+
+- Email triage and drafts
+- Research and reports
+- CRM updates
+- Sales follow-up preparation
+- Calendar and meetings
+- Customer-request triage
+- Documents and spreadsheets
+- Internal knowledge retrieval
+- Website and development support
+- Scheduled team updates
+
+## Prompt-to-deployment flow
+
+```text
+Customer describes the work
+  → system extracts desired role and tasks
+  → LegitClub proposes a preset/configuration
+  → customer selects plan and provider
+  → customer pays
+  → workspace and assistant are provisioned
+  → integrations are connected with customer authorization
+  → test task runs
+  → customer approves activation
+  → maintenance and usage monitoring begin
+```
+
+## Product language
+
+Use:
+
+> Describe the work. We prepare the assistant.
+
+> Start with a working setup, not a blank screen.
+
+> Your assistant arrives with the tools, skills, schedules, and guardrails for the job you chose.
+
+Avoid:
+
+- Unrestricted computer claims
+- Guaranteed platform results
+- Universal WhatsApp availability
+- “Fully autonomous employee”
+- “Unlimited” usage
+- Claims that the assistant can act without permissions or approvals
+
+## Implementation boundary
+
+The prompt parser may suggest a template and configuration. It must not silently grant permissions, connect accounts, purchase numbers, send messages, publish content, or make purchases. Those actions require an entitlement check and/or explicit customer approval.
+
+## Platform model
+
+- Agent 37 provides the isolated persistent cloud computer.
+- LegitClub owns customer accounts, plans, billing, configuration, support, and audit history.
+- Approved model providers are selected per customer plan.
+- Provider credentials remain server-side.
+- Customer-connected accounts are authorized by the customer and scoped to the assistant.

@@ -1,0 +1,9 @@
+node_modules/
+.next/
+coverage/
+.env*
+!.env.example
+.vercel/
+.opencode/
+.slim/deepwork/
+tsconfig.tsbuildinfo
