@@ -1,6 +1,8 @@
 import { describe,expect,it } from 'vitest'
 import { AssistantLifecycle,newYouTubeAssistant,SandboxProvisioningAdapter } from '../lib/lifecycle'
-import { parseRequest } from '../lib/preset'
+import { parseRequest,deriveConfiguration } from '../lib/preset'
+import { decidePermissions } from '../lib/permissions'
+import { createWorkspace,serializeWorkspace,deserializeWorkspace,deriveTrialOutput } from '../lib/workspace'
 
 describe('configuration safety',()=>{
  it('never parses grants',()=>expect(parseRequest({requestedPermissions:['youtube.channel.read'],grantedPermissions:['youtube.channel.read']}).grantedPermissions).toEqual([]))
