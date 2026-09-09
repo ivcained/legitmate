@@ -1,10 +1,8 @@
 # LegitMate
 
-LegitMate turns a description of work into a reviewable setup for a managed AI assistant.
+LegitMate is a commissioning desk for managed AI assistants: describe the work, review a prepared configuration, inspect requested access and guardrails, run an isolated trial, and explicitly approve activation.
 
-> Describe the work. We prepare the assistant.
-
-This repository currently contains a provider-free hackathon prototype for a YouTube operations assistant. Payment, entitlement, provisioning, and execution are simulated and must not be represented as real integrations.
+This repository contains the ETHOnline 2026 Start Fresh MVP. The current demo is provider-free and deterministic. It does not connect accounts, publish content, send messages, purchase numbers, or take payment.
 
 ## Run locally
 
@@ -13,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open http://localhost:3000.
 
 ## Verification
 
@@ -24,41 +22,36 @@ npm test
 npm run build
 ```
 
-The current foundation has eight passing domain tests covering permission parsing, lifecycle gates, sandbox provisioning idempotency, audit transitions, and explicit activation approval.
+The lifecycle tests cover:
 
-## Handoff status
+- parser output never grants permissions;
+- unknown permissions are rejected;
+- provisioning and trials are blocked until their prerequisites;
+- activation requires a separate approval;
+- approval is recorded exactly once;
+- sandbox provisioning is idempotent;
+- lifecycle snapshots are immutable;
+- transitions and approval are auditable.
 
-This commit is a working scaffold, not a launch-ready release.
+## Demo boundary
 
-Implemented:
+The UI labels entitlement and provisioning as simulated sandbox behavior. The dashboard is derived from the guarded lifecycle aggregate, not from a free-standing stage string. The trial is read-only and its output is deterministic.
 
-- Responsive editorial commissioning-desk interface
-- Brief, prepared setup, sandbox entitlement, trial, and dashboard screens
-- Deterministic YouTube preset and strict permission allowlist
-- Guarded lifecycle domain with explicit approval and audit events
-- Honest sandbox labeling and no real external side effects
-- Health endpoint and local verification scripts
-- QA screenshots in the repository root
+## ETHOnline 2026 prize strategy
 
-Known blockers:
+Primary target:
 
-1. The browser UI uses its own stage state instead of the guarded lifecycle in `lib/lifecycle.ts`.
-2. The current trial and activation buttons can advance the UI without invoking the domain transitions.
-3. Only the display stage is restored from local storage, allowing impossible workflow states after reload or manual storage edits.
-4. Dashboard audit rows are presentation data rather than events derived from the domain audit log.
-5. The lifecycle exposes a mutable record; it should return immutable snapshots.
-6. Browser-level tests are still required for activation gating, refresh restoration, audit derivation, and mobile behavior.
-7. `npm audit --omit=dev` reports remaining transitive PostCSS and Sharp vulnerabilities. Critical Next.js advisories were removed by upgrading to Next.js 15.5.25.
+- The Graph — Best AI Tooling or AI Use Case with The Graph (From Scratch). The intended load-bearing feature is a live Graph-backed research step that turns blockchain data into the prepared assistant's test output. This target requires live provider data and must not ship with static fixtures presented as live data.
 
-The next implementation step is to make one validated lifecycle aggregate the sole source of truth for both the UI and audit timeline, then add browser-level coverage before deployment.
+Secondary targets, only if their qualification work is completed and evidenced:
 
-## Product boundaries
+- ENS — Best Use of ENSv2. Give an assistant configuration a real ENSv2 Sepolia namespace and permissioned records; ENS must be central, not a label.
+- Privy — Best B2B financial product. Add Privy wallet/auth plus a real approval or entitlement workflow; a connect button alone does not qualify.
+- Chainlink — Best Confidential Workflow. Add a real CRE confidential handler for a sensitive policy or provider secret; a normal API route does not qualify.
+- Arc — Best Agentic Economy Application with Circle Agent Stack. Add a real Arc/USDC settlement path only if the full paid request can be demonstrated end to end.
 
-- Prompt parsing may suggest a preset and requested permissions.
-- Parsing never grants permissions.
-- No account is connected by this prototype.
-- No message or content is sent or published.
-- No purchase or real payment occurs.
-- Agent 37 is the intended workspace provider, but it is not integrated in this commit.
+We will submit only for tracks whose qualification requirements are demonstrated in the public repo and video. The product itself remains the core story; sponsor integrations must make the commissioning and approval flow stronger rather than becoming disconnected demos.
 
-See `preconfigured-agents-ready-to-deploy.txt` for the full product brief.
+## Current known limitation
+
+`npm audit --omit=dev` still reports two transitive vulnerabilities in the Next.js 15.5 dependency tree (one moderate and one high). The app does not use image optimization or custom server actions, but this remains release risk and should be cleared before public production deployment, either by a compatible dependency update or an explicitly reviewed Next.js 16 upgrade.
