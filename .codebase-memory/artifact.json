@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "2b0ea17772a0d07a21d620b18d7e15a9abc30e90",
+    "indexed_at": "2026-09-09T15:58:31Z",
+    "project": "legitmate",
+    "nodes": 65,
+    "edges": 129,
+    "original_size": 1835008,
+    "compressed_size": 89821,
+    "compression_level": 9
+}
