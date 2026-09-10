@@ -1,0 +1,55 @@
+name: Deploy LegitMate
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legitmate-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Verify and deploy to mate.legitclub.com
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out pushed revision
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify before deployment
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test -- --run
+          npm run build
+
+      - name: Configure deployment SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.LEGITMATE_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.LEGITMATE_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/legitmate_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/legitmate_deploy ~/.ssh/known_hosts
+
+      - name: Deploy verified revision and smoke test
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/legitmate_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes root@187.127.148.194 \
+            "EXPECTED_SHA=$GIT_SHA /root/legitmate-deploy.sh"
