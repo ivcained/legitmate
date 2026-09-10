@@ -47,6 +47,9 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/legitmate_deploy ~/.ssh/known_hosts
 
+      - name: Install VPS deployment script
+        run: scp -i ~/.ssh/legitmate_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes ops/legitmate-deploy.sh root@187.127.148.194:/root/legitmate-deploy.sh
+
       - name: Deploy verified revision and smoke test
         env:
           GIT_SHA: ${{ github.sha }}
