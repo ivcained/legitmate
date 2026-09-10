@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         return metadata && typeof metadata === 'object' && (metadata as Record<string, unknown>).client_request_id === id
       })
       if (match) return { payload: { id: match.id, status: match.status, url: match.url, template }, status: 200 }
-      const payload = await createInstance({ user: scope, name, template, resources: resources ?? { cpu: 2, memory: 4, disk: 6 }, metadata: { client_request_id: id, source: 'legitmate' }, auto_sleep: true, idle_timeout_seconds: 900, budget: { monthly_cap_micros: 5000000 } })
+      const payload = await createInstance({ user: scope, name, template, resources: resources ?? { cpu: 2, memory: 4, disk: 6 }, metadata: { client_request_id: id, source: 'legitmate', ...(typeof body?.agency_agent_slug === 'string' ? { agency_agent_slug: body.agency_agent_slug } : {}), ...(typeof body?.model === 'string' ? { model: body.model } : {}), ...(Array.isArray(body?.capabilities) ? { capabilities: body.capabilities.slice(0, 100) } : {}) }, auto_sleep: true, idle_timeout_seconds: 900, budget: { monthly_cap_micros: 5000000 } })
       const instance = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
       return { payload: { id: instance.id, status: instance.status, url: instance.url, template }, status: 201 }
     })
