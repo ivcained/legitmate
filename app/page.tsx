@@ -10,6 +10,7 @@ const promptExample = 'Each Monday, research emerging Ethereum topics and prepar
 const stateLabel: Record<State, string> = { draft: 'DRAFT', reviewed: 'REVIEWED', entitled: 'ENTITLED', provisioned: 'PROVISIONED', 'test-passed': 'TESTED', active: 'ACTIVE' }
 const STORAGE_KEY = 'legitmate.workspace'
 const STORAGE_VERSION = 1
+const surfacePorts: Record<'chat' | 'files' | 'terminal' | 'integrations' | 'settings', number> = { chat: 9119, files: 8080, terminal: 7681, integrations: 9119, settings: 9119 }
 const permissionLabels: Record<Permission, string> = {
   'youtube.channel.read': 'Read channel details',
   'youtube.analytics.read': 'Read channel analytics',
@@ -17,6 +18,9 @@ const permissionLabels: Record<Permission, string> = {
 }
 type Decision = 'approved' | 'denied'
 type WorkspaceRecord = { version: 1; brief: string; id: string; decisions: Partial<Record<Permission, Decision>>; trialOutput: string[]; acknowledged: boolean; snapshot: AssistantSnapshot }
+type AgentInstance = { id: string; name: string; status: string; template: string; url?: string; createdAt: string; usage?: { spend: string; budget: string } }
+type LaunchState = { template: string; message: string; instance?: AgentInstance }
+type AgentAction = 'start' | 'stop' | 'restart'
 
 function isState(value: unknown): value is State { return typeof value === 'string' && ['draft', 'reviewed', 'entitled', 'provisioned', 'test-passed', 'active'].includes(value) }
 function validRecord(value: unknown): value is WorkspaceRecord {
@@ -49,7 +53,9 @@ export default function Home() {
   const [trialOutput, setTrialOutput] = useState<string[]>([])
   const [ack, setAck] = useState(false)
   const [error, setError] = useState('')
-  const [launchState, setLaunchState] = useState<{ template: string; message: string } | null>(null)
+  const [launchState, setLaunchState] = useState<LaunchState | null>(null)
+  const [agentBusy, setAgentBusy] = useState(false)
+  const [agentError, setAgentError] = useState('')
   const snap = assistant?.snapshot
 
   useEffect(() => {
@@ -74,13 +80,37 @@ export default function Home() {
   const stageIndex = Math.max(0, stages.findIndex((item) => item.toLowerCase().startsWith(stage)))
   const audit = useMemo(() => snap?.audit.slice().reverse() ?? [], [snap])
   const act = (fn: () => void) => { try { setError(''); fn() } catch (e) { setError(e instanceof Error ? e.message : 'Action blocked') } }
+  const agentAction = async (action: AgentAction) => {
+    const instance = launchState?.instance
+    if (!instance) return
+    setAgentBusy(true); setAgentError('')
+    try {
+      const response = await fetch(`/api/agents/${instance.id}/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' } })
+      const result = await response.json()
+      if (!response.ok || !result.ok) throw new Error(result.message ?? 'Agent action is unavailable.')
+      setLaunchState((current) => current ? { ...current, instance: { ...instance, status: result.instance?.status ?? (action === 'stop' ? 'stopped' : 'running') }, message: `Instance ${action} request accepted.` } : current)
+    } catch (e) { setAgentError(e instanceof Error ? e.message : 'Agent action failed.') } finally { setAgentBusy(false) }
+  }
+  const openAgentSurface = async (surface: 'chat' | 'files' | 'terminal' | 'integrations' | 'settings') => {
+    const instance = launchState?.instance
+    if (!instance) return
+    setAgentBusy(true); setAgentError('')
+    try {
+      const response = await fetch(`/api/agents/instances/${instance.id}/signed-url`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ port: surfacePorts[surface] }) })
+      const result = await response.json()
+      if (!response.ok || !result.ok || typeof result.result?.url !== 'string') throw new Error(result.message ?? 'Signed access is not available.')
+      window.open(result.result.url, '_blank', 'noopener,noreferrer')
+    } catch (e) { setAgentError(e instanceof Error ? e.message : 'Could not mint a signed link.') } finally { setAgentBusy(false) }
+  }
   const launchAgent = async (template: string, label: string) => {
-    setLaunchState({ template, message: `Launching ${label}…` })
+    setLaunchState({ template, message: `Launching ${label}…` }); setAgentError('')
     try {
       const response = await fetch('/api/agents/launch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ template, name: label }) })
       const result = await response.json()
-      setLaunchState({ template, message: result.ok ? `Instance ${result.instance.id} is ${result.instance.status}.` : result.message ?? 'Launch is not available yet.' })
-    } catch { setLaunchState({ template, message: 'Launch could not be reached. No instance was created.' }) }
+      if (!response.ok || !result.ok) throw new Error(result.message ?? 'Launch is not available yet.')
+      const raw = result.instance as Record<string, unknown>
+      setLaunchState({ template, message: `Instance ${String(raw.status ?? 'provisioned')} · signed access is ready when requested.`, instance: { id: String(raw.id), name: label, status: String(raw.status ?? 'provisioned'), template, url: typeof raw.url === 'string' ? raw.url : undefined, createdAt: new Date().toISOString(), usage: { spend: '$0.00', budget: '$5.00 / month' } } })
+    } catch (e) { setLaunchState({ template, message: e instanceof Error ? e.message : 'Launch could not be reached. No instance was created.' }) }
   }
   const prepare = () => {
     if (brief.trim().length < 12) { setError('Add a little more detail so we can prepare a useful setup.'); return }
@@ -96,7 +126,7 @@ export default function Home() {
 
   return <main className="shell"><header className="topbar"><div className="brand"><span className="brand-mark">LM</span> LegitMate</div><div className="top-meta">Commissioning desk · v0.1 / sandbox</div></header><div className="main">
     <section className="intro"><div><div className="eyebrow">A managed assistant, properly commissioned</div><h1>Describe the work.<br /><em>We prepare</em> the assistant.</h1><p className="intro-copy">Start with a working setup, not a blank screen. Review the proposed tools, boundaries, and activation decision before anything can act.</p></div><div className="registration mono">FILE 001 / YC-OPS<strong>Prepared for creator operations</strong>09 SEP 2026<br />Provider-free walkthrough</div></section>
-    <section className="desk" aria-label="Assistant commissioning workflow"><div className="agent-launch"><div><div className="eyebrow">Deploy your prepared Hermes workspace</div><h2 className="agent-launch-title">One click from brief to instance.</h2><p className="lede">Choose a managed Agent37 template. LegitMate keeps provisioning behind an approved server-side route; your instance, budget, and credentials stay separate from this browser.</p></div><div className="agent-options"><button className="agent-option" onClick={() => launchAgent('agent37-hermes', 'LegitMate Hermes assistant')}><strong>Hermes assistant</strong><span>Managed model · files · browser · skills</span><b>Launch →</b></button><button className="agent-option" onClick={() => launchAgent('cloud-computai', 'Cloud ComputAI workspace')}><strong>Cloud ComputAI</strong><span>Hermes workspace · live desktop option</span><b>Launch →</b></button><button className="agent-option" onClick={() => launchAgent('legitmate-youtube', 'YouTube operations assistant')}><strong>YouTube operations</strong><span>Prepared research and draft workflow</span><b>Launch →</b></button></div>{launchState && <div className="notice" role="status"><strong>{launchState.template}</strong>{launchState.message}</div>}</div><div className="desk-workflow"><nav className="stages" aria-label="Commissioning stages"><div className="stage-label mono">The desk / {String(Math.min(stageIndex + 1, 6)).padStart(2, '0')} of 06</div>{stages.map((item, index) => <div className={`stage ${index === stageIndex ? 'active' : ''} ${index < stageIndex ? 'done' : ''}`} key={item}><span className="stage-number">{index < stageIndex ? '✓' : `0${index + 1}`}</span><span>{item}<span className="stage-state">{index < stageIndex ? 'complete' : index === stageIndex ? 'in review' : 'up next'}</span></span></div>)}</nav>
+    <section className="desk" aria-label="Assistant commissioning workflow"><div className="agent-launch"><div><div className="eyebrow">Deploy your prepared Hermes workspace</div><h2 className="agent-launch-title">One click from brief to instance.</h2><p className="lede">Choose a managed Agent37 template. LegitMate keeps provisioning behind an approved server-side route; your instance, budget, and credentials stay separate from this browser.</p></div><div className="agent-options"><button className="agent-option" onClick={() => launchAgent('agent37-hermes', 'LegitMate Hermes assistant')}><strong>Hermes assistant</strong><span>Managed model · files · browser · skills</span><b>Launch →</b></button><button className="agent-option" onClick={() => launchAgent('cloud-computai', 'Cloud ComputAI workspace')}><strong>Cloud ComputAI</strong><span>Hermes workspace · live desktop option</span><b>Launch →</b></button><button className="agent-option" onClick={() => launchAgent('legitmate-youtube', 'YouTube operations assistant')}><strong>YouTube operations</strong><span>Prepared research and draft workflow</span><b>Launch →</b></button></div>{launchState && <div className="agent-result" role="status"><div className="agent-result-top"><div><span className="eyebrow">Instance / {launchState.instance ? launchState.instance.id : 'setup'}</span><strong>{launchState.instance?.name ?? launchState.template}</strong><p>{launchState.message}</p></div>{launchState.instance && <span className={`instance-status ${launchState.instance.status === 'running' ? 'is-live' : ''}`}>● {launchState.instance.status}</span>}</div>{launchState.instance ? <><div className="agent-stats"><div><span>Spend</span><strong>{launchState.instance.usage?.spend}</strong></div><div><span>Budget</span><strong>{launchState.instance.usage?.budget}</strong></div><div><span>Region</span><strong>Isolated / US</strong></div></div><div className="agent-controls"><div className="control-group"><span className="control-label">Open signed access</span><button onClick={() => openAgentSurface('chat')} disabled={agentBusy}>Chat ↗</button><button onClick={() => openAgentSurface('files')} disabled={agentBusy}>Files ↗</button><button onClick={() => openAgentSurface('terminal')} disabled={agentBusy}>Terminal ↗</button><button onClick={() => openAgentSurface('integrations')} disabled={agentBusy}>Integrations ↗</button><button onClick={() => openAgentSurface('settings')} disabled={agentBusy}>Settings ↗</button></div><div className="control-group"><span className="control-label">Lifecycle</span><button onClick={() => agentAction('start')} disabled={agentBusy}>Start</button><button onClick={() => agentAction('stop')} disabled={agentBusy}>Stop</button><button onClick={() => agentAction('restart')} disabled={agentBusy}>Restart</button></div></div>{agentError && <div className="agent-error" role="alert">{agentError}</div>}<p className="agent-footnote mono">Links are minted by the server and expire. No Agent37 key is exposed to this browser.</p></> : <div className="agent-setup-state"><span className="setup-icon">!</span><div><strong>Setup needed before access</strong><p>Provisioning will appear here with status, budget, and controls. If this is unavailable, check the server’s Agent37 configuration.</p></div></div>}</div>}</div><div className="desk-workflow"><nav className="stages" aria-label="Commissioning stages"><div className="stage-label mono">The desk / {String(Math.min(stageIndex + 1, 6)).padStart(2, '0')} of 06</div>{stages.map((item, index) => <div className={`stage ${index === stageIndex ? 'active' : ''} ${index < stageIndex ? 'done' : ''}`} key={item}><span className="stage-number">{index < stageIndex ? '✓' : `0${index + 1}`}</span><span>{item}<span className="stage-state">{index < stageIndex ? 'complete' : index === stageIndex ? 'in review' : 'up next'}</span></span></div>)}</nav>
       <div className="content">{error && <div className="blocked" role="alert"><strong>Action blocked.</strong> {error}</div>}
         {stage === 'brief' && <><div className="eyebrow">01 / Intake</div><h2>Start with a working setup,<br />not a blank screen.</h2><p className="lede">Tell us what the assistant should handle, who it serves, and where you want the final say. We turn it into a prepared configuration you can inspect.</p><div className="prompt"><textarea aria-label="Describe the work" value={brief} onChange={(event) => { setBrief(event.target.value); setError('') }} placeholder="For example: I run a YouTube channel about..." /><div className="mono character-count">{brief.length} characters · plain language is fine</div></div><div className="actions"><button className="secondary" onClick={() => setBrief(promptExample)}>Use Ethereum creator example</button><button className="primary" onClick={prepare}>Prepare my setup →</button></div><div className="rule" /><div className="eyebrow">Other desks / concepts only</div><div className="preset-row"><div className="preset"><span className="concept">CONCEPT / 02</span><h3>WhatsApp concierge</h3><p>Draft replies and reminders for review. Not active in this walkthrough.</p></div><div className="preset"><span className="concept">CONCEPT / 03</span><h3>Business Operator</h3><p>Prepare recurring office work. Not active in this walkthrough.</p></div></div></>}
         {stage === 'prepared' && <><span className="stamp">{stateLabel[snap!.state]} / REVIEW</span><h2>Your setup, on paper.</h2><p className="lede">Prepared from your brief: <strong>{brief}</strong></p><div className="config-grid"><div className="config-box"><h3>Requested permissions</h3><ul>{snap!.requestedPermissions.map((permission) => <li key={permission}>{permissionLabels[permission]} <span className="permission-id mono">{permission}</span></li>)}</ul></div><div className="config-box"><h3>Permission decisions</h3><p className="helper">Approve or deny each request. This local record is separate from provider access.</p>{snap!.requestedPermissions.map((permission) => <div className="permission-row" key={permission}><span>{permissionLabels[permission]}</span><span className="permission-actions"><button className={decisions[permission] === 'approved' ? 'choice selected' : 'choice'} aria-pressed={decisions[permission] === 'approved'} onClick={() => setPermission(permission, 'approved')}>Approve</button><button className={decisions[permission] === 'denied' ? 'choice denied selected' : 'choice denied'} aria-pressed={decisions[permission] === 'denied'} onClick={() => setPermission(permission, 'denied')}>Deny</button></span></div>)}</div></div><div className="notice"><strong>Guardrail / always on</strong>Requested access is not granted access. No account connection, publishing, messaging, or purchasing occurs in this provider-free demo.</div><div className="actions"><button className="secondary" onClick={() => { setAssistant(null); setError('') }}>← Edit brief</button><button className="primary" onClick={() => act(() => assistant!.review())}>Review access &amp; plan →</button></div></>}
