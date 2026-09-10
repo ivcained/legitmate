@@ -8,7 +8,7 @@ export const APPROVED_TEMPLATES = new Set([
   'legitmate-whatsapp-concierge',
   'cloud-computai',
 ])
-export const LIFECYCLE_ACTIONS = new Set(['start', 'stop', 'restart', 'resize', 'update'])
+export const LIFECYCLE_ACTIONS = new Set(['start', 'stop', 'restart', 'resize', 'update', 'delete'])
 const MAX_BODY_BYTES = 64 * 1024
 
 type Json = Record<string, unknown> | unknown[] | string | number | boolean | null
