@@ -1,19 +1,35 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-cd /root/legitmate
+
+readonly APP_DIR=/root/legitmate
+readonly NODE_BIN=/root/.nvm/versions/node/v24.6.0/bin
+export PATH="$NODE_BIN:/usr/bin:/bin"
+
+[[ -x "$NODE_BIN/node" && -x "$NODE_BIN/npm" ]] || {
+  echo "pinned Node installation is missing: $NODE_BIN" >&2
+  exit 1
+}
+[[ -n "${EXPECTED_SHA:-}" && "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+  echo 'EXPECTED_SHA must be the 40-character pushed Git SHA' >&2
+  exit 1
+}
+
+cd "$APP_DIR"
 exec 9>/run/legitmate-deploy.lock
 flock -n 9 || { echo 'deploy already running'; exit 0; }
 
-git fetch origin main
+git fetch --prune origin main
 git checkout -q main
 git reset --hard origin/main
-if [[ -n "${EXPECTED_SHA:-}" && "$(git rev-parse HEAD)" != "$EXPECTED_SHA" ]]; then
-  echo "checked out $(git rev-parse HEAD), expected $EXPECTED_SHA" >&2
+actual_sha=$(git rev-parse HEAD)
+if [[ "$actual_sha" != "$EXPECTED_SHA" ]]; then
+  echo "checked out $actual_sha, expected $EXPECTED_SHA" >&2
   exit 1
 fi
-export PATH=/root/.nvm/versions/node/v22.22.2/bin:$PATH
-rm -rf node_modules
+
+rm -rf node_modules .next
 npm ci
+node -e "require.resolve('next/package.json')"
 npm run lint
 npm run typecheck
 npm test -- --run

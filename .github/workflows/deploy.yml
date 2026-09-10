@@ -24,7 +24,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 24.6.0
           cache: npm
 
       - name: Install locked dependencies
@@ -48,11 +48,15 @@ jobs:
           chmod 600 ~/.ssh/legitmate_deploy ~/.ssh/known_hosts
 
       - name: Install VPS deployment script
-        run: scp -i ~/.ssh/legitmate_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes ops/legitmate-deploy.sh root@187.127.148.194:/root/legitmate-deploy.sh
+        run: |
+          scp -i ~/.ssh/legitmate_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            ops/legitmate-deploy.sh root@187.127.148.194:/root/legitmate-deploy.sh
+          ssh -i ~/.ssh/legitmate_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            root@187.127.148.194 'chmod 700 /root/legitmate-deploy.sh'
 
       - name: Deploy verified revision and smoke test
         env:
           GIT_SHA: ${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/legitmate_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes root@187.127.148.194 \
-            "EXPECTED_SHA=$GIT_SHA /root/legitmate-deploy.sh"
+          ssh -i ~/.ssh/legitmate_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            root@187.127.148.194 "env EXPECTED_SHA='$GIT_SHA' /root/legitmate-deploy.sh"
