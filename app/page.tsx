@@ -107,7 +107,7 @@ export default function Home() {
     if (action === 'delete' && !window.confirm('Delete this instance? Its files, memory, sessions, and connections will be permanently removed.')) return
     setAgentBusy(true); setAgentError('')
     try {
-      const response = await fetch(`/api/agents/instances/${instance.id}/${action}`, { method: action === 'delete' ? 'DELETE' : 'POST', headers: { 'content-type': 'application/json' }, body: action === 'resize' ? JSON.stringify({ cpu: resourceConfig.cpu, memory: resourceConfig.memory, disk: resourceConfig.disk }) : undefined })
+      const response = await fetch(`/api/agents/instances/${instance.id}`, { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: action === 'resize' ? JSON.stringify({ cpu: resourceConfig.cpu, memory: resourceConfig.memory, disk: resourceConfig.disk }) : undefined })
       const result = await response.json()
       if (!response.ok || !result.ok) throw new Error(result.message ?? 'Agent action is unavailable.')
       if (action === 'delete') { setLaunchState(null); setAgentError('Instance deleted.'); return }
