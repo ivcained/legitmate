@@ -58,3 +58,16 @@ For the deadline, use the Agent37 instance filesystem as the durable configurati
 
 ### Deadline cuts
 No Farcaster, POIDH, trading, autonomous finance, new templates, or extra sponsor targets until the core configuration/deployment proof and submission package are complete.
+
+## Official Agent37 API findings — 2026-09-11
+- Instance-plane health is `GET https://{id}.agent37.app/v1/health?agent=hermes` using `X-Agent37-Key`; `healthy: true` is required, while `ok: true` alone is insufficient.
+- File writes use raw bytes with `PUT /v1/files/content?path=...`; reads use `GET /v1/files/content?path=...`. The server key has broad filesystem reach, confirming that LegitMate must construct fixed paths and never proxy caller paths.
+- Missing parent directories are created by file writes. File read/write responses support deterministic readback verification.
+- The documented workspace default is `/home/user/.agent37-gateway/workspace`.
+- Create returns when the computer is running, before Hermes is necessarily ready; configuration application must poll health first.
+- The data-plane response endpoint is `/v1/responses` with `X-Agent37-Key`; the existing hosting-plane `/instances/{id}/chat` helper is stale and must not be used for execution proof.
+
+## Privy authentication finding — 2026-09-11
+- Production has `NEXT_PUBLIC_PRIVY_APP_ID` configured, but no Privy server secret or verification key variable was found in the service environment.
+- Privy access tokens are signed and should be sent from the frontend to the backend via Authorization or the `privy-token` cookie, then verified server-side against the app verification key/library.
+- Until server verification credentials are configured, Agent37 provisioning must not be described as safe multi-tenant self-service. The provider-free demo can remain public; privileged instance operations need authentication before general release.
