@@ -25,5 +25,8 @@
 - Added fixed Agent37 identity destinations and application/readback verification under TDD. The applicator polls Hermes health, writes canonical configuration + SOUL.md + USER.md + AGENTS.md, reads all four back, and rejects hash drift.
 - Added Privy server token verification via `@privy-io/node`; supports explicit verification key or authenticated JWKS retrieval with the configured Privy app secret.
 - Removed caller-controlled identity headers from instance listing/creation and added ownership verification to list/create/get/delete/lifecycle paths.
+- Closed the remaining privileged-route gaps: delete alias, chat, budget read/write, and signed URL minting now require authenticated ownership. Signed links are limited to approved Hermes/noVNC ports.
+- Production now rejects single-user auth mode, instance listings are post-filtered by owner, and foreign/nonexistent instance lookups share the same 404 boundary.
+- Added focused authorization regression coverage for every privileged route.
 - Verification at latest GREEN slice: 35 unit tests, 2 Playwright tests, typecheck, production build, and diff checks passed.
 - Next: connect launch route to canonical parser/applicator and add configuration readback endpoint/UI receipt.

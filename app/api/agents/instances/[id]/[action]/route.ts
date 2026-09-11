@@ -17,11 +17,13 @@ export async function POST(request: NextRequest, context: Context) {
   } catch (e) { return errorResponse(e) }
 }
 
-export async function DELETE(_request: NextRequest, context: Context) {
+export async function DELETE(request: NextRequest, context: Context) {
   try {
     const { id: rawId, action } = await context.params
     const id = cleanId(rawId)
     if (!id || action !== 'delete') return Response.json({ ok: false, code: 'ACTION_NOT_ALLOWED' }, { status: 400 })
+    const { scope } = await requirePrincipal(request)
+    await requireOwnedInstance(id, scope)
     return Response.json({ ok: true, instance: await actionInstance(id, 'delete') })
   } catch (e) { return errorResponse(e) }
 }

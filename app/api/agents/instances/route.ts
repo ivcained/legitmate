@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
-import { APPROVED_TEMPLATES, cleanName, coalesce, createInstance, errorResponse, listInstances, readJson, requestId } from '../../../../lib/agent37'
+import { APPROVED_TEMPLATES, cleanName, coalesce, createInstance, errorResponse, listOwnedInstances, readJson, requestId } from '../../../../lib/agent37'
 import { requirePrincipal } from '../../../../lib/auth'
 
 export async function GET(request: NextRequest) {
-  try { const { scope } = await requirePrincipal(request); const payload = await listInstances(scope)
+  try { const { scope } = await requirePrincipal(request); const payload = await listOwnedInstances(scope)
  return Response.json({ ok: true, data: payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>).data ?? payload : payload }) } catch (e) { return errorResponse(e) }
 }
 
@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
     const { scope } = await requirePrincipal(request)
     const id = requestId(request, body, scope)
     const result = await coalesce(`${scope}:${id}`, async () => {
-      const existing = await listInstances(scope)
-      const items = (existing && typeof existing === 'object' && Array.isArray((existing as Record<string, unknown>).data)) ? (existing as Record<string, unknown>).data as Record<string, unknown>[] : []
+      const existingPayload = await listOwnedInstances(scope)
+      const items = (existingPayload && typeof existingPayload === 'object' && !Array.isArray(existingPayload) && Array.isArray((existingPayload as Record<string, unknown>).data)) ? (existingPayload as Record<string, unknown>).data as Record<string, unknown>[] : []
       const match = items.find((item) => {
         const metadata = item.metadata
         return metadata && typeof metadata === 'object' && (metadata as Record<string, unknown>).client_request_id === id

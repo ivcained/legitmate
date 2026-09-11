@@ -12,6 +12,7 @@ function safeSubject(value: string): string {
 export async function requirePrincipal(request: Request): Promise<Principal> {
   const singleUser = process.env.LEGITMATE_SINGLE_USER_SUBJECT?.trim()
   if (singleUser) {
+    if (process.env.NODE_ENV === 'production') throw new Agent37Error('AUTH_NOT_CONFIGURED', 503)
     const subject = safeSubject(singleUser)
     return { subject, scope: `legitmate:${subject}`, mode: 'single-user' }
   }

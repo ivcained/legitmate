@@ -70,13 +70,24 @@ export async function instanceRequest(id: string, path: string, init: RequestIni
 }
 
 export function listInstances(scope: string) { return upstream(`/instances?user=${encodeURIComponent(scope)}`) }
+export async function listOwnedInstances(scope: string) {
+  const payload = await listInstances(scope)
+  const record = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : null
+  const data = Array.isArray(record?.data) ? record.data : Array.isArray(payload) ? payload : []
+  const owned = data.filter((item) => item && typeof item === 'object' && !Array.isArray(item) && (item as Record<string, unknown>).user === scope)
+  return record ? { ...record, data: owned } : owned
+}
 export function getInstance(id: string) { return upstream(`/instances/${encodeURIComponent(id)}`) }
 export async function requireOwnedInstance(id: string, scope: string) {
-  const instance = await getInstance(id)
-  if (!instance || typeof instance !== 'object' || Array.isArray(instance) || (instance as Record<string, unknown>).user !== scope) {
+  try {
+    const instance = await getInstance(id)
+    if (!instance || typeof instance !== 'object' || Array.isArray(instance) || (instance as Record<string, unknown>).user !== scope) {
+      throw new Agent37Error('INSTANCE_NOT_FOUND', 404)
+    }
+    return instance as Record<string, unknown>
+  } catch {
     throw new Agent37Error('INSTANCE_NOT_FOUND', 404)
   }
-  return instance as Record<string, unknown>
 }
 export function createInstance(body: Record<string, unknown>) { return upstream('/instances', { method: 'POST', body: JSON.stringify(body) }) }
 export function actionInstance(id: string, action: string, body?: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: body ? JSON.stringify(body) : undefined }) }
