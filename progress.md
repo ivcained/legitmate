@@ -21,3 +21,9 @@
 - Final Phase 1 verification: 20 unit tests passed, 2 Playwright tests passed, typecheck passed, production build passed, `git diff --check` clean.
 - Current phase: Phase 2, server allowlists and canonical Agent37 configuration application.
 - Next: write RED tests for canonical configuration validation and fixed identity-file destinations.
+- Added canonical configuration validation under TDD: server allowlists Agency slugs, model aliases, and catalog-prefixed skills/plugins; rejects duplicates, excessive capabilities, unknown IDs, extra profile fields, NULs, oversized text, and caller paths; stable SHA-256 config IDs verified.
+- Added fixed Agent37 identity destinations and application/readback verification under TDD. The applicator polls Hermes health, writes canonical configuration + SOUL.md + USER.md + AGENTS.md, reads all four back, and rejects hash drift.
+- Added Privy server token verification via `@privy-io/node`; supports explicit verification key or authenticated JWKS retrieval with the configured Privy app secret.
+- Removed caller-controlled identity headers from instance listing/creation and added ownership verification to list/create/get/delete/lifecycle paths.
+- Verification at latest GREEN slice: 35 unit tests, 2 Playwright tests, typecheck, production build, and diff checks passed.
+- Next: connect launch route to canonical parser/applicator and add configuration readback endpoint/UI receipt.

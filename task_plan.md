@@ -5,7 +5,7 @@ Reach a defensible ETHGlobal submission in 1–2 days with one working, verifiab
 choose an Agency specialist → choose model/capabilities → edit profile → deploy an Agent37 workspace → run a real task → show evidence and honest limits.
 
 ## Next Step
-Implement server-side allowlists and canonical configuration validation under TDD, then apply/read back fixed Agent37 identity files.
+Wire canonical configuration parsing/application into the launch route, return a verified receipt, and expose reopen/readback status.
 
 ## Current Phase
 Phase 2 — Make specialist configuration real
