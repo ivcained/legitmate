@@ -56,3 +56,4 @@ Phase 2 — Make specialist configuration real
 | UI config was initially metadata-only | 1 | Scope now includes server-side persistence/application before claiming completion. |
 | Focused test could not find `vitest` because the VPS deploy script had replaced `node_modules` in the shared checkout | 1 | Run `npm ci` after deployment completes, then resume the RED test; do not repeat while deployment is mutating dependencies. |
 | Deploy workflows for `235ebe9` and `2cd9551` failed because uncommitted RED tests existed in the same VPS checkout when deployment reset to the pushed SHA and ran verification | 2 | Do not leave failing/uncommitted TDD files in the production checkout across pushes; finish and commit each GREEN slice before triggering deploy. |
+| `npm ci` hit ENOTEMPTY while a deploy workflow was mutating the shared VPS `node_modules` | 1 | Wait for deploy completion, then remove/reinstall dependencies once; do not retry concurrently. |
