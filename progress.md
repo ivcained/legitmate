@@ -7,6 +7,9 @@
 - Launched four parallel read-only specialist lanes: security architecture, workflow architecture, sprint prioritization, and UI/reality gate.
 - Agency router direct delegation returned `INTERRUPTED`; switched to Hermes `delegate_task` with the same specialist scopes rather than repeating the failed approach.
 - `graft map/ask` returned no project graph output in this checkout; continued with existing verified repository evidence and targeted source reads.
+- The first deployment run for `235ebe9` failed because a later uncommitted RED test was present in the live checkout while the deploy script was validating the earlier SHA; the subsequent `75bab5a` deployment completed successfully after that file became part of the commit. No code rollback was needed.
+- Installed supported `@privy-io/node` (the replacement for deprecated server-auth) and added server principal verification code plus tests. Production still needs `PRIVY_VERIFICATION_KEY` before Privy multi-user operations can be enabled.
+- Removed caller-controlled identity headers from instance listing/creation. Lifecycle and delete routes now verify a trusted principal and compare the upstream instance `user` to the tenant scope before mutation.
 - Reconciled all four specialist reports: Security Architect, Workflow Architect, Product/Sprint Prioritizer, and UI/Reality Gate.
 - Confirmed critical blockers: lifecycle action method bug, unsafe tenant/ownership model, missing server allowlists, metadata-only configuration, and red Playwright suite.
 - Adopted the no-new-database deadline architecture: canonical configuration + readback receipt on the Agent37 instance filesystem.

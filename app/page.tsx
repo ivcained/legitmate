@@ -1,5 +1,6 @@
 'use client'
 
+import { getAccessToken } from '@privy-io/react-auth'
 import { useEffect, useMemo, useState } from 'react'
 import { createServerOwnedPreset, parseRequest } from '../lib/preset'
 import { ALLOWED_PERMISSIONS, type Permission } from '../lib/permissions'
@@ -122,6 +123,10 @@ export default function Home() {
   const toggleCapability = (capability: HermesCapability) => setSelectedCapabilities((current) => current.includes(capability.slug) ? current.filter((slug) => slug !== capability.slug) : [...current, capability.slug])
   const audit = useMemo(() => snap?.audit.slice().reverse() ?? [], [snap])
   const act = (fn: () => void) => { try { setError(''); fn(); setRevision((value) => value + 1) } catch (e) { setError(e instanceof Error ? e.message : 'Action blocked') } }
+  const authenticatedFetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const token = process.env.NEXT_PUBLIC_PRIVY_APP_ID ? await getAccessToken().catch(() => null) : null
+    return fetch(input, { ...init, headers: { ...init.headers, ...(token ? { authorization: `Bearer ${token}` } : {}) } })
+  }
   const agentAction = async (action: AgentAction) => {
     const instance = launchState?.instance
     if (!instance) return
@@ -129,7 +134,7 @@ export default function Home() {
     setAgentBusy(true); setAgentError('')
     try {
       const request = agentActionRequest(instance.id, action, resourceConfig)
-      const response = await fetch(request.url, request.init)
+      const response = await authenticatedFetch(request.url, request.init)
       const result = await response.json()
       if (!response.ok || !result.ok) throw new Error(result.message ?? 'Agent action is unavailable.')
       if (action === 'delete') { setLaunchState(null); setAgentError('Instance deleted.'); return }
@@ -141,7 +146,7 @@ export default function Home() {
     if (!instance) return
     setAgentBusy(true); setAgentError('')
     try {
-      const response = await fetch(`/api/agents/instances/${instance.id}/signed-url`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ port: surfacePorts[surface] }) })
+      const response = await authenticatedFetch(`/api/agents/instances/${instance.id}/signed-url`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ port: surfacePorts[surface] }) })
       const result = await response.json()
       if (!response.ok || !result.ok || typeof result.result?.url !== 'string') throw new Error(result.message ?? 'Signed access is not available.')
       window.open(result.result.url, '_blank', 'noopener,noreferrer')
@@ -156,7 +161,7 @@ export default function Home() {
     setPreflight(null)
     setLaunchState({ template, message: `Launching ${label}…` }); setAgentError('')
     try {
-      const response = await fetch('/api/agents/launch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ template, name: label, resources, agency_agent_slug: selectedAgency?.slug, model: selectedModel, capabilities: selectedCapabilities, profile_files: selectedAgency ? { 'soul.md': agencySoul, 'user.md': agencyUser, 'skills.md': agencySkills } : undefined }) })
+      const response = await authenticatedFetch('/api/agents/launch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ template, name: label, resources, agency_agent_slug: selectedAgency?.slug, model: selectedModel, capabilities: selectedCapabilities, profile_files: selectedAgency ? { 'soul.md': agencySoul, 'user.md': agencyUser, 'skills.md': agencySkills } : undefined }) })
       const result = await response.json()
       if (!response.ok || !result.ok) throw new Error(result.message ?? 'Launch is not available yet.')
       const raw = result.instance as Record<string, unknown>

@@ -17,14 +17,6 @@ export class Agent37Error extends Error {
   constructor(public code: string, public status = 502) { super(code) }
 }
 
-export function userId(request: Request): string {
-  const value = request.headers.get('x-legitmate-user-id') ?? request.headers.get('x-user-id')
-  if (!value || !/^[a-zA-Z0-9:_-]{1,128}$/.test(value)) return 'anonymous'
-  return value
-}
-
-export function scopedUser(request: Request): string { return `legitmate:${userId(request)}` }
-
 export function cleanId(value: unknown): string | null {
   return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value) ? value : null
 }
@@ -33,10 +25,10 @@ export function cleanName(value: unknown, fallback = 'LegitMate Hermes assistant
   return typeof value === 'string' ? value.trim().slice(0, 80) || fallback : fallback
 }
 
-export function requestId(request: Request, body: Record<string, unknown> | null): string {
+export function requestId(request: Request, body: Record<string, unknown> | null, trustedSubject = 'server'): string {
   const supplied = request.headers.get('x-client-request-id') ?? body?.client_request_id
   if (typeof supplied === 'string' && /^[A-Za-z0-9._:-]{8,128}$/.test(supplied)) return supplied
-  return createHash('sha256').update(`${userId(request)}:${JSON.stringify(body ?? {})}`).digest('hex')
+  return createHash('sha256').update(`${trustedSubject}:${JSON.stringify(body ?? {})}`).digest('hex')
 }
 
 export async function readJson(request: Request): Promise<Record<string, unknown> | null> {
@@ -64,6 +56,13 @@ async function upstream(path: string, init: RequestInit = {}): Promise<Json> {
 
 export function listInstances(scope: string) { return upstream(`/instances?user=${encodeURIComponent(scope)}`) }
 export function getInstance(id: string) { return upstream(`/instances/${encodeURIComponent(id)}`) }
+export async function requireOwnedInstance(id: string, scope: string) {
+  const instance = await getInstance(id)
+  if (!instance || typeof instance !== 'object' || Array.isArray(instance) || (instance as Record<string, unknown>).user !== scope) {
+    throw new Agent37Error('INSTANCE_NOT_FOUND', 404)
+  }
+  return instance as Record<string, unknown>
+}
 export function createInstance(body: Record<string, unknown>) { return upstream('/instances', { method: 'POST', body: JSON.stringify(body) }) }
 export function actionInstance(id: string, action: string, body?: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: body ? JSON.stringify(body) : undefined }) }
 export function updateBudget(id: string, body: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/budget`, { method: 'PATCH', body: JSON.stringify(body) }) }
@@ -72,7 +71,7 @@ export function chat(id: string, body: Record<string, unknown>) { return upstrea
 
 export function errorResponse(error: unknown) {
   const e = error instanceof Agent37Error ? error : new Agent37Error('AGENT37_ERROR')
-  const messages: Record<string, string> = { AGENT37_NOT_CONFIGURED: 'Instance provisioning is not configured yet.', PAYLOAD_TOO_LARGE: 'Request is too large.' }
+  const messages: Record<string, string> = { AGENT37_NOT_CONFIGURED: 'Instance provisioning is not configured yet.', PAYLOAD_TOO_LARGE: 'Request is too large.', AUTH_NOT_CONFIGURED: 'Secure server authentication is not configured.', AUTH_REQUIRED: 'Sign in before managing an instance.', INVALID_AUTH_TOKEN: 'Your session is invalid or expired.', INSTANCE_NOT_FOUND: 'Instance not found.' }
   return Response.json({ ok: false, code: e.code, message: messages[e.code] ?? 'Agent service request failed.' }, { status: e.status })
 }
 

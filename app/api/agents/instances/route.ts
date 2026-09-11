@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server'
-import { APPROVED_TEMPLATES, cleanName, coalesce, createInstance, errorResponse, listInstances, readJson, requestId, scopedUser } from '../../../../lib/agent37'
+import { APPROVED_TEMPLATES, cleanName, coalesce, createInstance, errorResponse, listInstances, readJson, requestId } from '../../../../lib/agent37'
+import { requirePrincipal } from '../../../../lib/auth'
 
 export async function GET(request: NextRequest) {
-  try { const payload = await listInstances(scopedUser(request))
+  try { const { scope } = await requirePrincipal(request); const payload = await listInstances(scope)
  return Response.json({ ok: true, data: payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>).data ?? payload : payload }) } catch (e) { return errorResponse(e) }
 }
 
@@ -20,8 +21,8 @@ export async function POST(request: NextRequest) {
       if (typeof disk !== 'number' || !Number.isInteger(disk) || disk < 2 || disk > (cpu === 2 ? 12 : cpu === 4 ? 20 : 40)) return Response.json({ ok: false, code: 'INVALID_RESOURCES' }, { status: 400 })
     }
     const name = cleanName(body?.name)
-    const scope = scopedUser(request)
-    const id = requestId(request, body)
+    const { scope } = await requirePrincipal(request)
+    const id = requestId(request, body, scope)
     const result = await coalesce(`${scope}:${id}`, async () => {
       const existing = await listInstances(scope)
       const items = (existing && typeof existing === 'object' && Array.isArray((existing as Record<string, unknown>).data)) ? (existing as Record<string, unknown>).data as Record<string, unknown>[] : []
