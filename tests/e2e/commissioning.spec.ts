@@ -2,6 +2,13 @@ import { expect, test } from '@playwright/test'
 
 const brief = 'Each Monday, research emerging Ethereum topics and prepare three video concepts for review. Never publish without approval.'
 
+async function approveEveryPermission(page: import('@playwright/test').Page) {
+  for (const name of ['Read channel details', 'Read channel analytics', 'Create video drafts']) {
+    const row = page.locator('.permission-row').filter({ hasText: name })
+    await row.getByRole('button', { name: 'Approve', exact: true }).click()
+  }
+}
+
 async function startFromBrief(page: import('@playwright/test').Page) {
   await page.goto('/')
   await page.getByLabel('Describe the work').fill(brief)
@@ -18,11 +25,7 @@ test.describe('LegitMate commissioning flow', () => {
 
     await expect(page.getByRole('heading', { name: 'Your setup, on paper.' })).toBeVisible()
     await expect(page.getByText('Requested permissions')).toBeVisible()
-    for (const name of ['Read channel details', 'Read channel analytics', 'Create video drafts']) {
-      // Each approval is tied to its row; use the row text to avoid relying on DOM order.
-      const row = page.locator('.permission-row').filter({ hasText: name })
-      await row.getByRole('button', { name: 'Approve', exact: true }).click()
-    }
+    await approveEveryPermission(page)
     await page.getByRole('button', { name: 'Review access & plan' }).click()
 
     await expect(page.getByRole('heading', { name: 'Choose the room.' })).toBeVisible()
@@ -47,6 +50,7 @@ test.describe('LegitMate commissioning flow', () => {
 
   test('restores an in-progress commissioning state after refresh', async ({ page }) => {
     await startFromBrief(page)
+    await approveEveryPermission(page)
     await page.getByRole('button', { name: 'Review access & plan' }).click()
     await page.getByRole('button', { name: 'Provision sandbox' }).click()
     await expect(page.getByRole('heading', { name: 'A quiet, isolated trial.' })).toBeVisible()

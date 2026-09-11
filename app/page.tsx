@@ -7,6 +7,7 @@ import { newYouTubeAssistant, type AssistantLifecycle, type AssistantSnapshot, t
 import { EmbeddedWallet } from '../components/embedded-wallet'
 import { AGENCY_AGENTS, AGENCY_AGENT_COUNT, type AgencyAgent } from '../lib/agency-agents'
 import { HERMES_PLUGINS, HERMES_SKILLS, type HermesCapability } from '../lib/hermes-catalog'
+import { agentActionRequest, type AgentAction } from '../lib/agent-actions'
 
 const stages = ['Brief', 'Prepared setup', 'Access & plan', 'Isolated trial', 'Activation', 'Dashboard / audit']
 const promptExample = 'Each Monday, research emerging Ethereum topics and prepare three video concepts for review. Never publish without approval.'
@@ -28,7 +29,6 @@ type TemplateGroup = 'All' | 'Creator ops' | 'Personal admin' | 'Research'
 
 const resourceDefaults = { cpu: 2, memory: 4, disk: 6 }
 type HermesTemplate = { id: string; name: string; outcome: string; detail: string; group: Exclude<TemplateGroup, 'All'>; tag: string }
-type AgentAction = 'start' | 'stop' | 'restart' | 'resize' | 'update' | 'delete'
 
 const hermesTemplates: HermesTemplate[] = [
   { id: 'agent37-hermes', name: 'Hermes daily desk', outcome: 'Turn loose requests into a clean daily queue.', detail: 'Files, browser, terminal, and skills pre-wired for repeatable admin.', group: 'Personal admin', tag: 'BEST START' },
@@ -84,6 +84,7 @@ export default function Home() {
   const [agentBusy, setAgentBusy] = useState(false)
   const [agentError, setAgentError] = useState('')
   const [resourceConfig, setResourceConfig] = useState({ cpu: 2, memory: 4, disk: 6 })
+  const [revision, setRevision] = useState(0)
   const snap = assistant?.snapshot
 
   useEffect(() => {
@@ -102,7 +103,7 @@ export default function Home() {
     if (!assistant || !snap) return
     const record: WorkspaceRecord = { version: STORAGE_VERSION, brief, id: assistant.id, decisions, trialOutput, acknowledged: ack, snapshot: snap }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(record))
-  }, [assistant, snap, brief, decisions, trialOutput, ack])
+  }, [assistant, snap, brief, decisions, trialOutput, ack, revision])
 
   const stage = !assistant ? 'brief' : !snap ? 'brief' : snap.state === 'draft' ? 'prepared' : snap.state === 'reviewed' ? 'access' : snap.state === 'entitled' ? 'access' : snap.state === 'provisioned' ? 'trial' : snap.state === 'test-passed' ? 'activation' : 'dashboard'
   const stageIndex = Math.max(0, stages.findIndex((item) => item.toLowerCase().startsWith(stage)))
@@ -120,14 +121,15 @@ export default function Home() {
   const capabilityMatches = [...HERMES_SKILLS, ...HERMES_PLUGINS].filter((item) => (capabilityKind === 'all' || item.kind === capabilityKind) && `${item.name} ${item.description}`.toLowerCase().includes(capabilityQuery.toLowerCase().trim())).slice(0, 32)
   const toggleCapability = (capability: HermesCapability) => setSelectedCapabilities((current) => current.includes(capability.slug) ? current.filter((slug) => slug !== capability.slug) : [...current, capability.slug])
   const audit = useMemo(() => snap?.audit.slice().reverse() ?? [], [snap])
-  const act = (fn: () => void) => { try { setError(''); fn() } catch (e) { setError(e instanceof Error ? e.message : 'Action blocked') } }
+  const act = (fn: () => void) => { try { setError(''); fn(); setRevision((value) => value + 1) } catch (e) { setError(e instanceof Error ? e.message : 'Action blocked') } }
   const agentAction = async (action: AgentAction) => {
     const instance = launchState?.instance
     if (!instance) return
     if (action === 'delete' && !window.confirm('Delete this instance? Its files, memory, sessions, and connections will be permanently removed.')) return
     setAgentBusy(true); setAgentError('')
     try {
-      const response = await fetch(`/api/agents/instances/${instance.id}`, { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: action === 'resize' ? JSON.stringify({ cpu: resourceConfig.cpu, memory: resourceConfig.memory, disk: resourceConfig.disk }) : undefined })
+      const request = agentActionRequest(instance.id, action, resourceConfig)
+      const response = await fetch(request.url, request.init)
       const result = await response.json()
       if (!response.ok || !result.ok) throw new Error(result.message ?? 'Agent action is unavailable.')
       if (action === 'delete') { setLaunchState(null); setAgentError('Instance deleted.'); return }
