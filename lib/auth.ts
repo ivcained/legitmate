@@ -1,4 +1,4 @@
-import { verifyAccessToken } from '@privy-io/node'
+import { PrivyClient, verifyAccessToken } from '@privy-io/node'
 import { Agent37Error } from './agent37'
 
 export type Principal = { subject: string; scope: string; mode: 'privy' | 'single-user' }
@@ -18,7 +18,8 @@ export async function requirePrincipal(request: Request): Promise<Principal> {
 
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID?.trim()
   const verificationKey = process.env.PRIVY_VERIFICATION_KEY?.trim()
-  if (!appId || !verificationKey) throw new Agent37Error('AUTH_NOT_CONFIGURED', 503)
+  const appSecret = process.env.PRIVY_APP_SECRET?.trim()
+  if (!appId || (!verificationKey && !appSecret)) throw new Agent37Error('AUTH_NOT_CONFIGURED', 503)
 
   const authorization = request.headers.get('authorization')
   const cookieToken = request.headers.get('cookie')?.match(/(?:^|;\s*)privy-token=([^;]+)/)?.[1]
@@ -26,7 +27,9 @@ export async function requirePrincipal(request: Request): Promise<Principal> {
   if (!accessToken) throw new Agent37Error('AUTH_REQUIRED', 401)
 
   try {
-    const claims = await verifyAccessToken({ access_token: accessToken, app_id: appId, verification_key: verificationKey })
+    const claims = verificationKey
+      ? await verifyAccessToken({ access_token: accessToken, app_id: appId, verification_key: verificationKey })
+      : await new PrivyClient({ appId, appSecret: appSecret! }).utils().auth().verifyAccessToken(accessToken)
     const subject = safeSubject(claims.user_id)
     return { subject, scope: `legitmate:${subject}`, mode: 'privy' }
   } catch {
