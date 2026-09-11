@@ -54,6 +54,21 @@ async function upstream(path: string, init: RequestInit = {}): Promise<Json> {
   return payload
 }
 
+export async function instanceRequest(id: string, path: string, init: RequestInit = {}): Promise<Response> {
+  const key = process.env.AGENT37_API_KEY?.trim()
+  if (!key) throw new Agent37Error('AGENT37_NOT_CONFIGURED', 503)
+  let response: Response
+  try {
+    response = await fetch(`https://${encodeURIComponent(id)}.agent37.app${path}`, {
+      ...init,
+      headers: { 'X-Agent37-Key': key, ...init.headers },
+      cache: 'no-store',
+    })
+  } catch { throw new Agent37Error('AGENT37_UNREACHABLE', 502) }
+  if (!response.ok) throw new Agent37Error('AGENT37_ERROR', response.status >= 400 && response.status < 500 ? response.status : 502)
+  return response
+}
+
 export function listInstances(scope: string) { return upstream(`/instances?user=${encodeURIComponent(scope)}`) }
 export function getInstance(id: string) { return upstream(`/instances/${encodeURIComponent(id)}`) }
 export async function requireOwnedInstance(id: string, scope: string) {
