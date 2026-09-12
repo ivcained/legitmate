@@ -5,7 +5,7 @@ Reach a defensible ETHGlobal submission in 1–2 days with one working, verifiab
 choose an Agency specialist → choose model/capabilities → edit profile → deploy an Agent37 workspace → run a real task → show evidence and honest limits.
 
 ## Next Step
-Build the real Agent37 execution proof: verify the applied configuration, run one server-owned reversible task, and show the exact result with honest failure/retry states.
+Wait for the Phase 3 review gate, then commit/push the fixed readiness proof and verify the deployed revision live.
 
 ## Current Phase
 Phase 3 — Agent37 execution proof
@@ -26,9 +26,11 @@ Phase 3 — Agent37 execution proof
 
 ## Phase 3 — Agent37 execution proof [in_progress]
 - Verify selected configuration is present in the running instance.
-- Run one real, reversible task through the existing Chat/Files surfaces.
-- Add explicit loading, failure, retry, and reset states.
-- Gate: evidence includes instance ID/status, applied files/config, task output, and no fabricated success state.
+- Run exactly one server-owned, read-only readiness task through `/v1/responses`.
+- Add explicit loading, failure, idempotent retry, and result states.
+- Keep model, capability, infrastructure, wallet, and raw file controls out of the beginner path.
+- Gate: evidence includes instance ID/status, applied files/config, exact task output, and no fabricated success state.
+- Hard stop: add no new features once a fresh user can complete setup, verification, and the safe test in under three minutes without manual repair.
 
 ## Phase 4 — One sponsor proof path [pending]
 - Prefer The Graph if credentials and a reproducible live query are available.

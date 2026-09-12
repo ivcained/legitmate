@@ -36,3 +36,6 @@
 - Phase 2 released as commit `7795768`; GitHub deployment `34671842285` completed successfully and production `/api/health` returned `ok`.
 - Phase 2 release gate: 45 unit tests, 2 Playwright tests, lint, typecheck, production build, remote SHA, and live health passed. Transitive dependency exceptions remain documented.
 - Phase 3 started: real Agent37 execution proof plus a dedicated Frontend & User Simplicity review lane.
+- Added a protected, fixed-prompt Agent37 `/v1/responses` readiness proof with applied-configuration precondition, 15-second deadline, and idempotent replay in the active process.
+- Added one plain-language “Run safe test” UI that appears only after configuration readback succeeds; no prompt, tool, URL, or model override reaches the endpoint.
+- Phase 3 local gate: 50 unit tests, 2 Playwright tests, lint, typecheck, production build, and diff checks passed.

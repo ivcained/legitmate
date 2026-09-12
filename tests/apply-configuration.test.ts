@@ -43,29 +43,6 @@ describe('Agent37 configuration application', () => {
 
   it('reports drift when the canonical configuration is malformed', async () => {
     vi.stubEnv('AGENT37_API_KEY', 'test-key')
-    const hashes = Object.fromEntries([
-      ['configuration', [CONFIGURATION_PATH, '{invalid']],
-      ['soul', [IDENTITY_DESTINATIONS.soul, configuration.identity.soul]],
-      ['user', [IDENTITY_DESTINATIONS.user, configuration.identity.user]],
-      ['agents', [IDENTITY_DESTINATIONS.agents, configuration.identity.agents]],
-    ].map(([role, [path, content]]) => [role, { role, path, sha256: createHash('sha256').update(content).digest('hex'), bytes: Buffer.byteLength(content) }]))
-    const receipt = { schema_version: 1, config_id: configuration.config_id, status: 'applied', files: Object.values(hashes), verified_at: new Date().toISOString() }
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const path = new URL(String(input)).searchParams.get('path')
-      if (path === RECEIPT_PATH) return new Response(JSON.stringify(receipt))
-      if (path === CONFIGURATION_PATH) return new Response('{invalid')
-      if (path === IDENTITY_DESTINATIONS.soul) return new Response(configuration.identity.soul)
-      if (path === IDENTITY_DESTINATIONS.user) return new Response(configuration.identity.user)
-      return new Response(configuration.identity.agents)
-    })
-    const result = await readAgentConfiguration('ab12cd34ef')
-    expect(result.status).toBe('drifted')
-    expect(result.configuration).toBeNull()
-    expect(result.verification.verified).toBe(false)
-  })
-
-  it('reports drift when the canonical configuration is malformed', async () => {
-    vi.stubEnv('AGENT37_API_KEY', 'test-key')
     const malformed = '{invalid'
     const sources = [
       { role: 'configuration', path: CONFIGURATION_PATH, content: malformed },
