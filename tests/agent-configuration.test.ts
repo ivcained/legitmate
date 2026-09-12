@@ -32,6 +32,7 @@ describe('agent configuration validation', () => {
   it.each([
     [{ ...valid, agency_agent_slug: '../root' }, 'AGENCY_NOT_APPROVED'],
     [{ ...valid, model: 'arbitrary/model' }, 'MODEL_NOT_APPROVED'],
+    [{ ...valid, model: 'surplus-capacity' }, 'MODEL_NOT_APPROVED'],
     [{ ...valid, capabilities: ['https://evil.invalid/plugin'] }, 'CAPABILITY_NOT_APPROVED'],
     [{ ...valid, capabilities: ['skill:ab-testing'] }, 'CAPABILITY_NOT_APPROVED'],
     [{ ...valid, capabilities: Array.from({ length: 17 }, (_, i) => `skill:fake-${i}`) }, 'TOO_MANY_CAPABILITIES'],

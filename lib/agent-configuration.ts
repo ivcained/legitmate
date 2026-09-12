@@ -11,7 +11,7 @@ export const CONFIGURATION_PATH = '/home/node/.agent37-gateway/workspace/.legitm
 export const RECEIPT_PATH = '/home/node/.agent37-gateway/workspace/.legitmate/receipt.json'
 
 const AGENCY_SLUGS = new Set(AGENCY_AGENTS.map((agent) => agent.slug))
-const APPROVED_MODELS = new Set(['nous-default', 'nous-reasoning', 'surplus-capacity'])
+const APPROVED_MODELS = new Set(['nous-default', 'nous-reasoning'])
 const SURPLUS_MODEL_ID = /^surplus\/[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/
 const APPROVED_CAPABILITIES = INSTALLABLE_HERMES_CAPABILITY_IDS
 const PROFILE_KEYS = new Set(['soul', 'user', 'agents'])
