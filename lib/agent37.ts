@@ -43,7 +43,7 @@ async function upstream(path: string, init: RequestInit = {}): Promise<Json> {
   if (!key) throw new Agent37Error('AGENT37_NOT_CONFIGURED', 503)
   let response: Response
   try {
-    response = await fetch(`${AGENT37_BASE}${path}`, {
+    response = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: { authorization: `Bearer ${key}`, accept: 'application/json', ...(init.body ? { 'content-type': 'application/json' } : {}), ...init.headers },
       cache: 'no-store',
