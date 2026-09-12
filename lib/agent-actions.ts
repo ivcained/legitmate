@@ -1,4 +1,4 @@
-export type AgentAction = 'start' | 'stop' | 'restart' | 'resize' | 'update' | 'delete'
+export type AgentAction = 'start' | 'stop' | 'restart' | 'resize' | 'delete'
 export type AgentResources = { cpu: number; memory: number; disk: number }
 
 export function agentActionRequest(id: string, action: AgentAction, resources: AgentResources): {

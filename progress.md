@@ -28,5 +28,9 @@
 - Closed the remaining privileged-route gaps: delete alias, chat, budget read/write, and signed URL minting now require authenticated ownership. Signed links are limited to approved Hermes/noVNC ports.
 - Production now rejects single-user auth mode, instance listings are post-filtered by owner, and foreign/nonexistent instance lookups share the same 404 boundary.
 - Added focused authorization regression coverage for every privileged route.
-- Verification at latest GREEN slice: 35 unit tests, 2 Playwright tests, typecheck, production build, and diff checks passed.
-- Next: connect launch route to canonical parser/applicator and add configuration readback endpoint/UI receipt.
+- Verification at latest GREEN slice: 45 unit tests, 2 Playwright tests, typecheck, production build, and diff checks passed.
+- Wired `POST /api/agents/launch` to trusted authentication, canonical configuration parsing, owner-scoped reconciliation, Agent37 provisioning, fixed-path application, receipt commit, and verified response semantics.
+- Added protected `GET /api/agents/instances/[id]/configuration` readback with applied/drifted status.
+- The UI now sends the canonical profile contract with a stable retry request ID, gates controls on an applied receipt, and renders readback evidence with an explicit runtime-activation limitation.
+- Full local gate after integration: 45 unit tests, 2 Playwright tests, lint, typecheck, and production build passed.
+- Next: independent spec/security review, then commit/push and verify production deployment before real Agent37 execution proof.

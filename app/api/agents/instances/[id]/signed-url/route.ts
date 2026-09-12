@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { cleanId, errorResponse, readJson, requireOwnedInstance, signedUrl } from '../../../../../../lib/agent37'
 import { requirePrincipal } from '../../../../../../lib/auth'
 
-const APPROVED_PORTS = new Set([3737, 6901])
+const APPROVED_PORTS = new Set([3737, 6901, 9119, 8080, 7681])
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {

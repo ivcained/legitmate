@@ -9,8 +9,8 @@
 - Existing tests: 3 files, 14 tests passed in the last recorded run.
 - Existing UI has Agency catalog, model selector, profile-file editors, and Hermes capability catalog selection.
 
-## Important product limitation
-The model, skill, and plugin controls currently represent browser state and launch metadata. They are not yet proven to persist or apply the selected configuration inside an Agent37 workspace. Do not describe them as installed/applied until read-back evidence exists.
+## Current configuration boundary
+The browser controls now submit a canonical server-validated configuration. `POST /api/agents/launch` provisions or reconciles the owned Agent37 instance, applies fixed configuration and identity files, commits a receipt last, and returns readback hashes. `GET /api/agents/instances/[id]/configuration` rechecks ownership and reports `applied` or `drifted`. The browser persists only the owned instance pointer and request ID, then rechecks the protected endpoint on reopen instead of trusting local verification state. This proves file persistence; it does not yet prove Hermes loaded the selected runtime model or capabilities.
 
 ## Hermes source research
 Fetched official pages:

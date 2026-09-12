@@ -7,6 +7,8 @@ export const IDENTITY_DESTINATIONS = {
   user: '/home/user/.hermes/memories/USER.md',
   agents: '/home/user/.agent37-gateway/workspace/AGENTS.md',
 } as const
+export const CONFIGURATION_PATH = '/home/user/.agent37-gateway/workspace/.legitmate/configuration.json'
+export const RECEIPT_PATH = '/home/user/.agent37-gateway/workspace/.legitmate/receipt.json'
 
 const AGENCY_SLUGS = new Set(AGENCY_AGENTS.map((agent) => agent.slug))
 const APPROVED_MODELS = new Set(['nous-default', 'nous-reasoning', 'surplus-capacity'])

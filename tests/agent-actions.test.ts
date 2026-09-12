@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { agentActionRequest } from '../lib/agent-actions'
 
 describe('agent lifecycle request routing', () => {
-  it.each(['start', 'stop', 'restart', 'update'] as const)('routes %s through the POST action endpoint', (action) => {
+  it.each(['start', 'stop', 'restart'] as const)('routes %s through the POST action endpoint', (action) => {
     expect(agentActionRequest('inst_123', action, { cpu: 2, memory: 4, disk: 6 })).toEqual({
       url: `/api/agents/instances/inst_123/${action}`,
       init: { method: 'POST', headers: { 'content-type': 'application/json' } },

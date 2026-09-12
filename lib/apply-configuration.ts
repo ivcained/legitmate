@@ -1,8 +1,6 @@
 import { createHash } from 'node:crypto'
 import { Agent37Error, instanceRequest } from './agent37'
-import { type AgentConfigurationV1, IDENTITY_DESTINATIONS } from './agent-configuration'
-
-const CONFIG_PATH = '/home/user/.agent37-gateway/workspace/.legitmate/configuration.json'
+import { CONFIGURATION_PATH, RECEIPT_PATH, type AgentConfigurationV1, IDENTITY_DESTINATIONS } from './agent-configuration'
 
 export type AppliedReceipt = {
   schema_version: 1
@@ -28,6 +26,50 @@ async function readFile(id: string, path: string) {
   return response.text()
 }
 
+export type ConfigurationVerification = {
+  verified: boolean
+  checked_at: string
+  files: Array<{ role: AppliedReceipt['files'][number]['role']; expected_sha256: string; actual_sha256?: string; matches: boolean }>
+}
+
+export async function readAgentConfiguration(instanceId: string): Promise<{
+  status: 'applied' | 'drifted'
+  configuration: AgentConfigurationV1 | null
+  receipt: AppliedReceipt
+  verification: ConfigurationVerification
+}> {
+  let rawConfiguration: string
+  let receipt: AppliedReceipt
+  try {
+    rawConfiguration = await readFile(instanceId, CONFIGURATION_PATH)
+    receipt = JSON.parse(await readFile(instanceId, RECEIPT_PATH)) as AppliedReceipt
+  } catch { throw new Agent37Error('CONFIGURATION_NOT_FOUND', 404) }
+  let configuration: AgentConfigurationV1 | null = null
+  try { configuration = JSON.parse(rawConfiguration) as AgentConfigurationV1 } catch { /* reported as configuration drift below */ }
+  if (!receipt?.config_id) throw new Agent37Error('CONFIGURATION_CORRUPT', 409)
+  const expectedPaths: Record<AppliedReceipt['files'][number]['role'], string> = { configuration: CONFIGURATION_PATH, soul: IDENTITY_DESTINATIONS.soul, user: IDENTITY_DESTINATIONS.user, agents: IDENTITY_DESTINATIONS.agents }
+  const roles = new Set(receipt.files?.map((file) => file.role))
+  if (receipt.schema_version !== 1 || receipt.status !== 'applied' || receipt.files?.length !== 4 || roles.size !== 4 || Object.keys(expectedPaths).some((role) => !roles.has(role as keyof typeof expectedPaths)) || receipt.files.some((file) => expectedPaths[file.role] !== file.path || !/^[a-f0-9]{64}$/.test(file.sha256) || !Number.isSafeInteger(file.bytes) || file.bytes < 0)) throw new Agent37Error('CONFIGURATION_CORRUPT', 409)
+  const sourceByRole = {
+    configuration: rawConfiguration,
+    soul: configuration?.identity?.soul ?? '',
+    user: configuration?.identity?.user ?? '',
+    agents: configuration?.identity?.agents ?? '',
+  }
+  const files: ConfigurationVerification['files'] = []
+  for (const expected of receipt.files) {
+    try {
+      const actual = await readFile(instanceId, expected.path)
+      const actualHash = sha256(actual)
+      files.push({ role: expected.role, expected_sha256: expected.sha256, actual_sha256: actualHash, matches: actualHash === expected.sha256 && sha256(sourceByRole[expected.role]) === expected.sha256 })
+    } catch {
+      files.push({ role: expected.role, expected_sha256: expected.sha256, matches: false })
+    }
+  }
+  const verified = Boolean(configuration && configuration.config_id === receipt.config_id && files.length === 4 && files.every((file) => file.matches))
+  return { status: verified ? 'applied' : 'drifted', configuration, receipt, verification: { verified, checked_at: new Date().toISOString(), files } }
+}
+
 export async function applyAgentConfiguration(
   instanceId: string,
   configuration: AgentConfigurationV1,
@@ -45,7 +87,7 @@ export async function applyAgentConfiguration(
   if (!healthy) throw new Agent37Error('AGENT_NOT_READY', 503)
 
   const sources = [
-    { role: 'configuration' as const, path: CONFIG_PATH, content: JSON.stringify(configuration) },
+    { role: 'configuration' as const, path: CONFIGURATION_PATH, content: JSON.stringify(configuration) },
     { role: 'soul' as const, path: IDENTITY_DESTINATIONS.soul, content: configuration.identity.soul },
     { role: 'user' as const, path: IDENTITY_DESTINATIONS.user, content: configuration.identity.user },
     { role: 'agents' as const, path: IDENTITY_DESTINATIONS.agents, content: configuration.identity.agents },
@@ -58,5 +100,9 @@ export async function applyAgentConfiguration(
     if (sha256(actual) !== sha256(file.content)) throw new Agent37Error('CONFIG_VERIFICATION_FAILED', 502)
     files.push({ role: file.role, path: file.path, sha256: sha256(actual), bytes: Buffer.byteLength(actual) })
   }
-  return { schema_version: 1, config_id: configuration.config_id, status: 'applied', files, verified_at: new Date().toISOString() }
+  const receipt = { schema_version: 1 as const, config_id: configuration.config_id, status: 'applied' as const, files, verified_at: new Date().toISOString() }
+  await writeFile(instanceId, RECEIPT_PATH, JSON.stringify(receipt))
+  const committed = await readFile(instanceId, RECEIPT_PATH)
+  if (sha256(committed) !== sha256(JSON.stringify(receipt))) throw new Agent37Error('RECEIPT_WRITE_FAILED', 502)
+  return receipt
 }
