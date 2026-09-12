@@ -15,34 +15,59 @@ const SHELL_SAFE = /^[A-Za-z0-9._/-]{1,160}$/
 
 export type RuntimeReceipt = {
   model: { provider: 'default' | 'surplus'; id: string; config_sha256: string }
-  capabilities: Array<{ id: string; status: 'available' | 'installed'; evidence: string }>
+  capabilities: Array<{ id: string; status: 'installed'; evidence: string }>
 }
 
 function quote(value: string) { return `'${value.replaceAll("'", "'\\''")}'` }
 
-function providerConfig(model: string) {
-  if (!model.startsWith('surplus/')) return { provider: 'default' as const, id: model, yaml: `model:\n  provider: agent37\n  default: ${model}\n` }
-  const id = model.slice('surplus/'.length)
-  const base = process.env.SURPLUS_AGENT_PROXY_URL?.trim()
-  const token = process.env.SURPLUS_AGENT_PROXY_TOKEN?.trim()
-  if (!base || !token || !SHELL_SAFE.test(id)) throw new Agent37Error('SURPLUS_NOT_CONFIGURED', 503)
+function validatedProxyUrl() {
+  const raw = process.env.SURPLUS_AGENT_PROXY_URL?.trim()
+  if (!raw) throw new Agent37Error('SURPLUS_NOT_CONFIGURED', 503)
   let url: URL
-  try { url = new URL(base) } catch { throw new Agent37Error('SURPLUS_NOT_CONFIGURED', 503) }
-  if (url.protocol !== 'https:' || url.username || url.password) throw new Agent37Error('SURPLUS_NOT_CONFIGURED', 503)
-  const normalized = `${url.toString().replace(/\/$/, '').replace(/\/v1$/, '')}/v1`
-  return { provider: 'surplus' as const, id, yaml: `model:\n  provider: "custom:Surplus"\n  default: ${JSON.stringify(id)}\ncustom_providers:\n  - name: "Surplus"\n    base_url: ${JSON.stringify(normalized)}\n    api_key: ${JSON.stringify(token)}\n    api_mode: "chat_completions"\n    model: ${JSON.stringify(id)}\n` }
+  try { url = new URL(raw) } catch { throw new Agent37Error('SURPLUS_NOT_CONFIGURED', 503) }
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || (url.port && url.port !== '443')) throw new Agent37Error('SURPLUS_NOT_CONFIGURED', 503)
+  return `${url.toString().replace(/\/$/, '').replace(/\/v1$/, '')}/v1`
 }
 
-export async function applyRuntimeConfiguration(instanceId: string, configuration: AgentConfigurationV1): Promise<RuntimeReceipt> {
-  const provider = providerConfig(configuration.runtime.model)
+function providerConfig(model: string) {
+  if (!model.startsWith('surplus/')) return {
+    provider: 'default' as const,
+    id: model,
+    yaml: `model:\n  provider: agent37\n  default: ${JSON.stringify(model)}\n`,
+    secret: null,
+  }
+  const id = model.slice('surplus/'.length)
+  const token = process.env.SURPLUS_AGENT_PROXY_TOKEN?.trim()
+  if (!token || !SHELL_SAFE.test(id)) throw new Agent37Error('SURPLUS_NOT_CONFIGURED', 503)
+  const api = validatedProxyUrl()
+  return {
+    provider: 'surplus' as const,
+    id,
+    secret: token,
+    yaml: `model:\n  provider: "custom:surplus"\n  default: ${JSON.stringify(id)}\nproviders:\n  surplus:\n    api: ${JSON.stringify(api)}\n    key_env: "SURPLUS_AGENT_PROXY_TOKEN"\n    transport: "openai_chat"\n    discover_models: false\n    models:\n      - ${JSON.stringify(id)}\n`,
+  }
+}
+
+async function applyModel(instanceId: string, model: string) {
+  const provider = providerConfig(model)
   const configPath = '/home/user/.hermes/config.yaml'
-  const encoded = Buffer.from(provider.yaml).toString('base64')
-  const write = await execInstance(instanceId, `mkdir -p /home/user/.hermes && printf %s ${quote(encoded)} | base64 -d > ${quote(configPath)}`) as Record<string, unknown>
+  const envPath = '/home/user/.hermes/.env'
+  const configEncoded = Buffer.from(provider.yaml).toString('base64')
+  const commands = [`mkdir -p /home/user/.hermes`, `printf %s ${quote(configEncoded)} | base64 -d > ${quote(configPath)}`, `chmod 600 ${quote(configPath)}`]
+  if (provider.secret) {
+    const envLine = `SURPLUS_AGENT_PROXY_TOKEN=${provider.secret.replaceAll('\\', '\\\\').replaceAll('\n', '').replaceAll('\r', '')}\n`
+    commands.push(`printf %s ${quote(Buffer.from(envLine).toString('base64'))} | base64 -d > ${quote(envPath)}`, `chmod 600 ${quote(envPath)}`)
+  }
+  const write = await execInstance(instanceId, commands.join(' && ')) as Record<string, unknown>
   if (write.exit_code !== 0) throw new Agent37Error('RUNTIME_CONFIG_FAILED', 502)
   const response = await instanceRequest(instanceId, `/v1/files/content?path=${encodeURIComponent(configPath)}`)
   const actual = await response.text()
-  if (actual !== provider.yaml) throw new Agent37Error('RUNTIME_CONFIG_VERIFICATION_FAILED', 502)
+  if (actual !== provider.yaml || actual.includes(provider.secret ?? '\0')) throw new Agent37Error('RUNTIME_CONFIG_VERIFICATION_FAILED', 502)
+  return { provider, actual }
+}
 
+export async function applyRuntimeConfiguration(instanceId: string, configuration: AgentConfigurationV1): Promise<RuntimeReceipt> {
+  const { provider, actual } = await applyModel(instanceId, configuration.runtime.model)
   const capabilities: RuntimeReceipt['capabilities'] = []
   for (const capabilityId of configuration.runtime.capability_ids) {
     const [kind, slug] = capabilityId.split(':', 2)
@@ -51,16 +76,17 @@ export async function applyRuntimeConfiguration(instanceId: string, configuratio
       if (!SKILLS.has(slug)) throw new Agent37Error('CAPABILITY_NOT_APPROVED', 400)
       const identifier = SKILL_INSTALLERS[slug]
       if (!identifier) throw new Agent37Error('CAPABILITY_NOT_INSTALLABLE', 400)
-      const result = await execInstance(instanceId, `hermes skills install ${quote(identifier)} --name ${quote(slug)} --yes && test -f ${quote(`/home/user/.hermes/skills/${slug}/SKILL.md`)}`) as Record<string, unknown>
+      const result = await execInstance(instanceId, `HERMES_HOME=/home/user/.hermes hermes skills install ${quote(identifier)} --name ${quote(slug)} --yes && test -f ${quote(`/home/user/.hermes/skills/${slug}/SKILL.md`)}`) as Record<string, unknown>
       if (result.exit_code !== 0) throw new Agent37Error('CAPABILITY_INSTALL_FAILED', 502)
       capabilities.push({ id: capabilityId, status: 'installed', evidence: `~/.hermes/skills/${slug}/SKILL.md` })
     } else if (kind === 'plugin') {
       if (!PLUGINS.has(slug)) throw new Agent37Error('CAPABILITY_NOT_APPROVED', 400)
-      const identifier = PLUGIN_INSTALLERS[slug]
-      if (!identifier) throw new Agent37Error('CAPABILITY_NOT_INSTALLABLE', 400)
-      const result = await execInstance(instanceId, `tmp=$(mktemp -d) && git clone --quiet ${quote('https://github.com/msitarzewski/agency-agents.git')} "$tmp/repo" && git -C "$tmp/repo" checkout --quiet ${quote(identifier)} && HERMES_HOME=/home/user/.hermes "$tmp/repo/scripts/convert.sh" --tool hermes && HERMES_HOME=/home/user/.hermes "$tmp/repo/scripts/install.sh" --tool hermes --no-interactive --no-convert && rm -rf "$tmp" && HERMES_HOME=/home/user/.hermes hermes plugins list --enabled --json | grep -F ${quote(`"name": "${slug}"`)}`) as Record<string, unknown>
+      const revision = PLUGIN_INSTALLERS[slug]
+      if (!revision) throw new Agent37Error('CAPABILITY_NOT_INSTALLABLE', 400)
+      const command = `tmp=$(mktemp -d) && git clone --quiet ${quote('https://github.com/msitarzewski/agency-agents.git')} "$tmp/repo" && git -C "$tmp/repo" checkout --quiet ${quote(revision)} && HERMES_HOME=/home/user/.hermes "$tmp/repo/scripts/convert.sh" --tool hermes && HERMES_HOME=/home/user/.hermes "$tmp/repo/scripts/install.sh" --tool hermes --no-interactive --no-convert && rm -rf "$tmp" && HERMES_HOME=/home/user/.hermes hermes plugins list --enabled --json | python3 -c ${quote(`import json,sys; data=json.load(sys.stdin); assert any(item.get('name') == '${slug}' and item.get('status') == 'enabled' for item in data)`)}`
+      const result = await execInstance(instanceId, command) as Record<string, unknown>
       if (result.exit_code !== 0) throw new Agent37Error('CAPABILITY_INSTALL_FAILED', 502)
-      capabilities.push({ id: capabilityId, status: 'installed', evidence: `hermes plugins list --enabled: ${slug}` })
+      capabilities.push({ id: capabilityId, status: 'installed', evidence: `hermes plugins list --enabled: ${slug}@${revision}` })
     } else throw new Agent37Error('CAPABILITY_NOT_APPROVED', 400)
   }
   return { model: { provider: provider.provider, id: provider.id, config_sha256: createHash('sha256').update(actual).digest('hex') }, capabilities }

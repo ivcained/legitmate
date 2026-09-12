@@ -20,8 +20,15 @@ describe('model discovery', () => {
     expect(fetchSpy.mock.calls[0][0]).toBe('https://surplus.example/v1/models')
   })
 
-  it('rejects insecure Surplus base URLs', async () => {
-    vi.stubEnv('SURPLUS_BASE_URL', 'http://127.0.0.1:8080')
+  it.each(['http://127.0.0.1:8080', 'https://localhost.', 'https://169.254.169.254/v1', 'https://surplus.example:8443/v1'])('rejects insecure Surplus base URL %s', async (url) => {
+    vi.stubEnv('SURPLUS_BASE_URL', url)
+    vi.stubEnv('SURPLUS_ALLOWED_HOSTS', new URL(url).hostname)
+    await expect(discoverModels()).rejects.toMatchObject({ code: 'SURPLUS_NOT_CONFIGURED' })
+  })
+
+  it('rejects a host outside the exact operator allowlist', async () => {
+    vi.stubEnv('SURPLUS_BASE_URL', 'https://attacker.example/v1')
+    vi.stubEnv('SURPLUS_ALLOWED_HOSTS', 'surplus.example')
     await expect(discoverModels()).rejects.toMatchObject({ code: 'SURPLUS_NOT_CONFIGURED' })
   })
 })
