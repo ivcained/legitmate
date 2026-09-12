@@ -1,62 +1,48 @@
 import { expect, test } from '@playwright/test'
 
-const brief = 'Each Monday, research emerging Ethereum topics and prepare three video concepts for review. Never publish without approval.'
-
-async function approveEveryPermission(page: import('@playwright/test').Page) {
-  for (const name of ['Read channel details', 'Read channel analytics', 'Create video drafts']) {
-    const row = page.locator('.permission-row').filter({ hasText: name })
-    await row.getByRole('button', { name: 'Approve', exact: true }).click()
-  }
-}
-
-async function startFromBrief(page: import('@playwright/test').Page) {
-  await page.goto('/')
-  await page.getByLabel('Describe the work').fill(brief)
-  await page.getByRole('button', { name: 'Prepare my setup' }).click()
-  await expect(page.getByRole('heading', { name: 'Your setup, on paper.' })).toBeVisible()
-}
-
-test.describe('LegitMate commissioning flow', () => {
-  test('commissions a sandbox assistant from brief through audit', async ({ page }) => {
+test.describe('LegitMate specialist setup', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.clear())
     await page.goto('/')
-    await page.getByRole('button', { name: 'Use Ethereum creator example' }).click()
-    await expect(page.getByLabel('Describe the work')).toHaveValue(brief)
-    await page.getByRole('button', { name: 'Prepare my setup' }).click()
-
-    await expect(page.getByRole('heading', { name: 'Your setup, on paper.' })).toBeVisible()
-    await expect(page.getByText('Requested permissions')).toBeVisible()
-    await approveEveryPermission(page)
-    await page.getByRole('button', { name: 'Review access & plan' }).click()
-
-    await expect(page.getByRole('heading', { name: 'Choose the room.' })).toBeVisible()
-    await page.getByRole('button', { name: 'Provision sandbox' }).click()
-    await expect(page.getByRole('heading', { name: 'A quiet, isolated trial.' })).toBeVisible()
-
-    await page.getByRole('button', { name: 'Run isolated trial' }).click()
-    await expect(page.getByText('Research Ethereum questions your audience is asking')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Ready for your approval.' })).toBeVisible()
-
-    const activate = page.getByRole('button', { name: 'Approve and activate' })
-    await expect(activate).toBeDisabled()
-    await page.getByText('I understand this setup is simulated, isolated, and inactive until I approve it.').click()
-    await expect(activate).toBeEnabled()
-    await activate.click()
-
-    await expect(page.getByRole('heading', { name: 'The desk is ready.' })).toBeVisible()
-    await expect(page.getByText('ACTIVE · ISOLATED')).toBeVisible()
-    await expect(page.getByText('Activation approved explicitly')).toBeVisible()
-    await expect(page.getByText('No content has been published.')).toBeVisible()
   })
 
-  test('restores an in-progress commissioning state after refresh', async ({ page }) => {
-    await startFromBrief(page)
-    await approveEveryPermission(page)
-    await page.getByRole('button', { name: 'Review access & plan' }).click()
-    await page.getByRole('button', { name: 'Provision sandbox' }).click()
-    await expect(page.getByRole('heading', { name: 'A quiet, isolated trial.' })).toBeVisible()
+  test('moves from the full roster to a reviewable specialist setup', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Select an agent' })).toBeVisible()
+    const roster = page.locator('.agency-grid')
+    await expect(roster).toHaveCSS('overflow-y', 'auto')
+    await expect(roster.getByRole('button')).toHaveCount(279)
 
-    await page.reload()
-    await expect(page.getByRole('heading', { name: 'A quiet, isolated trial.' })).toBeVisible()
-    await expect(page.getByText('TRIAL TASK / READ-ONLY')).toBeVisible()
+    await page.getByRole('button', { name: /UI Designer/ }).click()
+    await page.getByRole('button', { name: 'Continue to profile' }).click()
+    await expect(page.getByRole('heading', { name: 'Confirm the profile' })).toBeVisible()
+    await expect(page.getByText('Review or edit profile files')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Confirm profile' }).click()
+    await expect(page.getByRole('heading', { name: 'Choose provider and model' })).toBeVisible()
+    await expect(page.getByText('Balanced — recommended')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Continue to capabilities' }).click()
+    await expect(page.getByRole('heading', { name: 'Add capabilities' })).toBeVisible()
+    const privyCapability = page.locator('.capability-row').filter({ hasText: /^skillprivy/ })
+    const agencyCapability = page.locator('.capability-row').filter({ hasText: /^pluginagency agents router/ })
+    await expect(privyCapability).toBeVisible()
+    await expect(agencyCapability).toBeVisible()
+    await privyCapability.click()
+
+    await page.getByRole('button', { name: 'Review setup' }).click()
+    await expect(page.getByRole('heading', { name: 'Review and deploy' })).toBeVisible()
+    await expect(page.locator('.review-list').getByText('UI Designer', { exact: true })).toBeVisible()
+    await expect(page.getByText('skill: privy')).toBeVisible()
+    await expect(page.getByText('Start with an outcome.')).toHaveCount(0)
+  })
+
+  test('supports keyboard selection and remains usable on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const first = page.locator('.agency-grid .agency-card').first()
+    await first.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: 'Continue to profile' })).toBeEnabled()
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+    expect(overflow).toBe(false)
   })
 })

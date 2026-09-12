@@ -31,7 +31,7 @@ describe('runtime configuration', () => {
     agent37.execInstance.mockResolvedValue({ exit_code: 0 })
     agent37.instanceRequest.mockResolvedValue(new Response('model:\n  provider: agent37\n  default: nous-default\n'))
     const receipt = await applyRuntimeConfiguration('ab12cd34ef', config)
-    expect(agent37.execInstance.mock.calls.some(([, command]) => String(command).includes("hermes skills install 'https://raw.githubusercontent.com/privy-io/privy-agentic-wallets-skill/main/SKILL.md' --name 'privy' --yes"))).toBe(true)
+    expect(agent37.execInstance.mock.calls.some(([, command]) => String(command).includes("hermes skills install 'https://raw.githubusercontent.com/privy-io/privy-agentic-wallets-skill/7f104aa118a891aca85cfebbd68bf9f4a2cd85e7/SKILL.md' --name 'privy' --yes"))).toBe(true)
     expect(receipt.capabilities).toContainEqual(expect.objectContaining({ id: 'skill:privy', status: 'installed' }))
   })
 
@@ -40,14 +40,8 @@ describe('runtime configuration', () => {
     agent37.execInstance.mockResolvedValue({ exit_code: 0 })
     agent37.instanceRequest.mockResolvedValue(new Response('model:\n  provider: agent37\n  default: nous-default\n'))
     const receipt = await applyRuntimeConfiguration('ab12cd34ef', config)
-    expect(agent37.execInstance.mock.calls.some(([, command]) => String(command).includes("hermes plugins install 'https://github.com/msitarzewski/agency-agents.git' --enable"))).toBe(true)
+    expect(agent37.execInstance.mock.calls.some(([, command]) => String(command).includes("git clone --quiet 'https://github.com/msitarzewski/agency-agents.git'") && String(command).includes("checkout --quiet '6d29a9b08785a0e49ffc9818bbdd381164c2df5f'") && String(command).includes('install.sh" --tool hermes'))).toBe(true)
     expect(receipt.capabilities).toContainEqual(expect.objectContaining({ id: 'plugin:agency-agents-router', status: 'installed' }))
   })
 
-  it('fails closed when a catalog entry has no verified installer', async () => {
-    const config = parseAgentConfiguration({ ...base, model: 'nous-default', capabilities: ['skill:ab-testing'] }, 'owner')
-    agent37.execInstance.mockResolvedValue({ exit_code: 0 })
-    agent37.instanceRequest.mockResolvedValue(new Response('model:\n  provider: agent37\n  default: nous-default\n'))
-    await expect(applyRuntimeConfiguration('ab12cd34ef', config)).rejects.toMatchObject({ code: 'CAPABILITY_NOT_INSTALLABLE' })
-  })
 })

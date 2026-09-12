@@ -6,10 +6,10 @@ import { HERMES_PLUGINS, HERMES_SKILLS } from './hermes-catalog'
 const SKILLS = new Map(HERMES_SKILLS.map((item) => [item.slug, item]))
 const PLUGINS = new Map(HERMES_PLUGINS.map((item) => [item.slug, item]))
 const SKILL_INSTALLERS: Record<string, string> = {
-  privy: 'https://raw.githubusercontent.com/privy-io/privy-agentic-wallets-skill/main/SKILL.md',
+  privy: 'https://raw.githubusercontent.com/privy-io/privy-agentic-wallets-skill/7f104aa118a891aca85cfebbd68bf9f4a2cd85e7/SKILL.md',
 }
 const PLUGIN_INSTALLERS: Record<string, string> = {
-  'agency-agents-router': 'https://github.com/msitarzewski/agency-agents.git',
+  'agency-agents-router': '6d29a9b08785a0e49ffc9818bbdd381164c2df5f',
 }
 const SHELL_SAFE = /^[A-Za-z0-9._/-]{1,160}$/
 
@@ -58,7 +58,7 @@ export async function applyRuntimeConfiguration(instanceId: string, configuratio
       if (!PLUGINS.has(slug)) throw new Agent37Error('CAPABILITY_NOT_APPROVED', 400)
       const identifier = PLUGIN_INSTALLERS[slug]
       if (!identifier) throw new Agent37Error('CAPABILITY_NOT_INSTALLABLE', 400)
-      const result = await execInstance(instanceId, `hermes plugins install ${quote(identifier)} --enable && hermes plugins list --enabled --json | grep -F ${quote(`"name": "${slug}"`)}`) as Record<string, unknown>
+      const result = await execInstance(instanceId, `tmp=$(mktemp -d) && git clone --quiet ${quote('https://github.com/msitarzewski/agency-agents.git')} "$tmp/repo" && git -C "$tmp/repo" checkout --quiet ${quote(identifier)} && HERMES_HOME=/home/user/.hermes "$tmp/repo/scripts/convert.sh" --tool hermes && HERMES_HOME=/home/user/.hermes "$tmp/repo/scripts/install.sh" --tool hermes --no-interactive --no-convert && rm -rf "$tmp" && HERMES_HOME=/home/user/.hermes hermes plugins list --enabled --json | grep -F ${quote(`"name": "${slug}"`)}`) as Record<string, unknown>
       if (result.exit_code !== 0) throw new Agent37Error('CAPABILITY_INSTALL_FAILED', 502)
       capabilities.push({ id: capabilityId, status: 'installed', evidence: `hermes plugins list --enabled: ${slug}` })
     } else throw new Agent37Error('CAPABILITY_NOT_APPROVED', 400)

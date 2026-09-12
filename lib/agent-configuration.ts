@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { AGENCY_AGENTS } from './agency-agents'
-import { HERMES_PLUGINS, HERMES_SKILLS } from './hermes-catalog'
+import { INSTALLABLE_HERMES_CAPABILITY_IDS } from './hermes-catalog'
 
 export const IDENTITY_DESTINATIONS = {
   soul: '/home/user/.hermes/SOUL.md',
@@ -13,10 +13,7 @@ export const RECEIPT_PATH = '/home/user/.agent37-gateway/workspace/.legitmate/re
 const AGENCY_SLUGS = new Set(AGENCY_AGENTS.map((agent) => agent.slug))
 const APPROVED_MODELS = new Set(['nous-default', 'nous-reasoning', 'surplus-capacity'])
 const SURPLUS_MODEL_ID = /^surplus\/[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/
-const APPROVED_CAPABILITIES = new Set([
-  ...HERMES_SKILLS.map((item) => `skill:${item.slug}`),
-  ...HERMES_PLUGINS.map((item) => `plugin:${item.slug}`),
-])
+const APPROVED_CAPABILITIES = INSTALLABLE_HERMES_CAPABILITY_IDS
 const PROFILE_KEYS = new Set(['soul', 'user', 'agents'])
 const PROFILE_LIMITS = { soul: 12 * 1024, user: 8 * 1024, agents: 16 * 1024 } as const
 

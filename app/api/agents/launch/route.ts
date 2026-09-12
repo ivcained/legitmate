@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { applyAgentConfiguration } from '../../../../lib/apply-configuration'
 import { applyRuntimeConfiguration } from '../../../../lib/apply-runtime'
 import { ConfigurationError, parseAgentConfiguration } from '../../../../lib/agent-configuration'
+import { discoverModels } from '../../../../lib/model-discovery'
 import { Agent37Error, APPROVED_TEMPLATES, errorResponse, readJson } from '../../../../lib/agent37'
 import { requirePrincipal } from '../../../../lib/auth'
 import { parseResourceShape, provisionConfiguredInstance } from '../../../../lib/instance-provisioning'
@@ -14,6 +15,10 @@ export async function POST(request: NextRequest) {
     const template = typeof body.template === 'string' ? body.template : 'agent37-hermes'
     if (!APPROVED_TEMPLATES.has(template)) throw new Agent37Error('TEMPLATE_NOT_APPROVED', 400)
     const configuration = parseAgentConfiguration(body, principal.subject)
+    if (configuration.runtime.model.startsWith('surplus/')) {
+      const catalog = await discoverModels()
+      if (!catalog.models.some((model) => model.id === configuration.runtime.model && model.provider === 'surplus')) throw new Agent37Error('MODEL_NOT_APPROVED', 400)
+    }
     const resources = parseResourceShape(body.resources)
     const provisioned = await provisionConfiguredInstance({ scope: principal.scope, template, name: body.name, resources, configuration })
     const rawId = provisioned.instance.id

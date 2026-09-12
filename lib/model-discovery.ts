@@ -28,7 +28,7 @@ export async function discoverModels(): Promise<{ models: ModelChoice[]; surplus
   if (cached && cached.source === (url ?? '') && cached.until > now) return { models: cached.models, surplus: cached.models.some((model) => model.provider === 'surplus') ? 'live' : 'unavailable' }
   if (!url) return { models: [...DEFAULT_MODELS, ...fallbackModels()], surplus: fallbackModels().length ? 'fallback' : 'unavailable' }
   try {
-    const response = await fetch(url, { headers: { accept: 'application/json', ...(process.env.SURPLUS_API_KEY ? { authorization: 'Bearer ' + process.env.SURPLUS_API_KEY } : {}) }, cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    const response = await fetch(url, { headers: { accept: 'application/json', ...(process.env.SURPLUS_API_KEY ? { authorization: 'Bearer ' + process.env.SURPLUS_API_KEY } : {}) }, cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5000) })
     if (!response.ok) throw new Error('discovery failed')
     const payload = await response.json() as { data?: Array<{ id?: unknown }> }
     const surplus = [...new Set((payload.data ?? []).map((item) => item.id).filter((id): id is string => typeof id === 'string' && MODEL_ID.test(id)))].slice(0, 100).map((id) => ({ id: `surplus/${id}`, label: id, provider: 'surplus' as const }))

@@ -39,6 +39,7 @@ Phase 3.5 — Continuous specialist deployment and Surplus integration
 - Write the selected provider/model into persistent Hermes configuration.
 - Install only server-allowlisted skills/plugins after provisioning and verify their persistent artifacts before issuing the applied receipt.
 - Gate: a fresh user can select UI Designer, confirm profile, choose default or a discovered Surplus model, select capabilities, deploy, reopen, and verify the selected runtime configuration and installed artifacts.
+- Current verified slice: the five-step UI, server-side Surplus catalog validation, pinned Privy skill source, and pinned Agency router checkout pass local unit/build/browser gates. Live Agent37 installer proof still requires a configured launch and is not claimed yet.
 
 ## Phase 4 — One sponsor proof path [pending]
 - Prefer The Graph if credentials and a reproducible live query are available.
