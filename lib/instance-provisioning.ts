@@ -51,14 +51,13 @@ export async function provisionConfiguredInstance(input: {
       template: input.template,
       auto_sleep: true,
       idle_timeout_seconds: 1200,
-      cpu: input.resources.cpu,
-      memory_gb: input.resources.memory,
-      disk_gb: input.resources.disk,
+      resources: { cpu: input.resources.cpu, memory: input.resources.memory, disk: input.resources.disk },
       metadata: {
         client_request_id: input.configuration.client_request_id,
         config_id: input.configuration.config_id,
         agency_agent_slug: input.configuration.agency.slug,
       },
+      budget: { monthly_cap_micros: 5000000 },
     })
     if (!instance || typeof instance !== 'object' || Array.isArray(instance)) throw new Agent37Error('AGENT37_ERROR', 502)
     return { instance: instance as Record<string, unknown>, replayed: false }

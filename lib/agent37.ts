@@ -90,6 +90,7 @@ export async function requireOwnedInstance(id: string, scope: string) {
   }
 }
 export function createInstance(body: Record<string, unknown>) { return upstream('/instances', { method: 'POST', body: JSON.stringify(body) }) }
+export function execInstance(id: string, command: string) { return upstream(`/instances/${encodeURIComponent(id)}/exec`, { method: 'POST', body: JSON.stringify({ command }) }) }
 export function actionInstance(id: string, action: string, body?: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: body ? JSON.stringify(body) : undefined }) }
 export function updateBudget(id: string, body: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/budget`, { method: 'PATCH', body: JSON.stringify(body) }) }
 export function signedUrl(id: string, port: number) { return upstream(`/instances/${encodeURIComponent(id)}/signed-url`, { method: 'POST', body: JSON.stringify({ port }) }) }
@@ -97,7 +98,19 @@ export function chat(id: string, body: Record<string, unknown>) { return upstrea
 
 export function errorResponse(error: unknown) {
   const e = error instanceof Agent37Error ? error : new Agent37Error('AGENT37_ERROR')
-  const messages: Record<string, string> = { AGENT37_NOT_CONFIGURED: 'Instance provisioning is not configured yet.', PAYLOAD_TOO_LARGE: 'Request is too large.', AUTH_NOT_CONFIGURED: 'Secure server authentication is not configured.', AUTH_REQUIRED: 'Sign in before managing an instance.', INVALID_AUTH_TOKEN: 'Your session is invalid or expired.', INSTANCE_NOT_FOUND: 'Instance not found.' }
+  const messages: Record<string, string> = {
+    AGENT37_NOT_CONFIGURED: 'Instance provisioning is not configured yet.',
+    PAYLOAD_TOO_LARGE: 'Request is too large.',
+    AUTH_NOT_CONFIGURED: 'Secure server authentication is not configured.',
+    AUTH_REQUIRED: 'Sign in before managing an instance.',
+    INVALID_AUTH_TOKEN: 'Your session is invalid or expired.',
+    INSTANCE_NOT_FOUND: 'Instance not found.',
+    SURPLUS_NOT_CONFIGURED: 'Surplus is not configured for deployment yet. Choose the default model or ask an operator to add a revocable Surplus proxy.',
+    CAPABILITY_NOT_INSTALLABLE: 'That capability does not have a verified Agent37 installer yet.',
+    CAPABILITY_INSTALL_FAILED: 'The selected capability could not be installed and verified on the workspace.',
+    RUNTIME_CONFIG_FAILED: 'The selected model configuration could not be written.',
+    RUNTIME_CONFIG_VERIFICATION_FAILED: 'The selected model configuration could not be verified.',
+  }
   return Response.json({ ok: false, code: e.code, message: messages[e.code] ?? 'Agent service request failed.' }, { status: e.status })
 }
 

@@ -5,10 +5,10 @@ Reach a defensible ETHGlobal submission in 1–2 days with one working, verifiab
 choose an Agency specialist → choose model/capabilities → edit profile → deploy an Agent37 workspace → run a real task → show evidence and honest limits.
 
 ## Next Step
-Wait for the Phase 3 review gate, then commit/push the fixed readiness proof and verify the deployed revision live.
+Build the continuous Agency deployment flow: choose from all 279 specialists → confirm profile → choose default or live Surplus model → choose approved skills/plugins → review and deploy with runtime configuration and capability installation verified.
 
 ## Current Phase
-Phase 3 — Agent37 execution proof
+Phase 3.5 — Continuous specialist deployment and Surplus integration
 
 ## Phase 1 — Reconcile current build and lock scope [complete]
 - Confirmed repository, public deployment, latest successful CI, green unit/build checks, and explicit simulation boundary.
@@ -24,13 +24,21 @@ Phase 3 — Agent37 execution proof
 - Add validation for path traversal, size limits, unsafe fields, and tenant ownership.
 - Gate: fresh user can select, edit, deploy, reopen, and verify the configuration; no secrets reach the browser.
 
-## Phase 3 — Agent37 execution proof [in_progress]
+## Phase 3 — Agent37 execution proof [complete]
 - Verify selected configuration is present in the running instance.
 - Run exactly one server-owned, read-only readiness task through `/v1/responses`.
 - Add explicit loading, failure, idempotent retry, and result states.
 - Keep model, capability, infrastructure, wallet, and raw file controls out of the beginner path.
 - Gate: evidence includes instance ID/status, applied files/config, exact task output, and no fabricated success state.
 - Hard stop: add no new features once a fresh user can complete setup, verification, and the safe test in under three minutes without manual repair.
+
+## Phase 3.5 — Continuous specialist deployment and Surplus integration [in_progress]
+- Keep all 279 Agency specialists available in a bounded scrollable roster.
+- Guide one continuous sequence: specialist → profile confirmation → provider/model → capabilities → review/deploy.
+- Discover Surplus models server-side from `SURPLUS_BASE_URL`; keep keys and raw provider errors out of the browser.
+- Write the selected provider/model into persistent Hermes configuration.
+- Install only server-allowlisted skills/plugins after provisioning and verify their persistent artifacts before issuing the applied receipt.
+- Gate: a fresh user can select UI Designer, confirm profile, choose default or a discovered Surplus model, select capabilities, deploy, reopen, and verify the selected runtime configuration and installed artifacts.
 
 ## Phase 4 — One sponsor proof path [pending]
 - Prefer The Graph if credentials and a reproducible live query are available.

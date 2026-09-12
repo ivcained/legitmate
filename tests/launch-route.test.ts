@@ -5,6 +5,7 @@ const auth = vi.hoisted(() => ({ requirePrincipal: vi.fn() }))
 const parser = vi.hoisted(() => ({ parseAgentConfiguration: vi.fn() }))
 const provisioner = vi.hoisted(() => ({ provisionConfiguredInstance: vi.fn(), parseResourceShape: vi.fn() }))
 const applicator = vi.hoisted(() => ({ applyAgentConfiguration: vi.fn() }))
+const runtime = vi.hoisted(() => ({ applyRuntimeConfiguration: vi.fn() }))
 
 vi.mock('../lib/agent37', async () => {
   const actual = await vi.importActual<typeof import('../lib/agent37')>('../lib/agent37')
@@ -17,6 +18,7 @@ vi.mock('../lib/agent-configuration', async () => {
 })
 vi.mock('../lib/instance-provisioning', () => provisioner)
 vi.mock('../lib/apply-configuration', () => applicator)
+vi.mock('../lib/apply-runtime', () => runtime)
 
 import { POST } from '../app/api/agents/launch/route'
 import { ConfigurationError } from '../lib/agent-configuration'
@@ -48,6 +50,7 @@ describe('configured launch route', () => {
     provisioner.parseResourceShape.mockReturnValue({ cpu: 2, memory: 4, disk: 6 })
     provisioner.provisionConfiguredInstance.mockResolvedValue(provisioned)
     applicator.applyAgentConfiguration.mockResolvedValue(receipt)
+    runtime.applyRuntimeConfiguration.mockResolvedValue({ model: { provider: 'default', id: 'nous-default', config_sha256: 'a'.repeat(64) }, capabilities: [] })
     agent37Mocks.errorResponse.mockImplementation((error: { code?: string; status?: number }) => Response.json({ ok: false, code: error.code ?? 'AGENT37_ERROR' }, { status: error.status ?? 502 }))
   })
   afterEach(() => vi.restoreAllMocks())

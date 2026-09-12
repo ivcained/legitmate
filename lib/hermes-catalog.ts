@@ -2867,3 +2867,7 @@ export const HERMES_PLUGINS: readonly HermesCapability[] = [
 ];
 export const HERMES_SKILL_COUNT = 472 as const;
 export const HERMES_PLUGIN_COUNT = 5 as const;
+export const HERMES_CAPABILITIES: readonly HermesCapability[] = [...HERMES_SKILLS, ...HERMES_PLUGINS];
+// Every visible choice has a server-owned installer and post-install verification.
+export const INSTALLABLE_HERMES_CAPABILITY_IDS = new Set(['skill:privy', 'plugin:agency-agents-router']);
+export const INSTALLABLE_HERMES_CAPABILITIES = HERMES_CAPABILITIES.filter((item) => INSTALLABLE_HERMES_CAPABILITY_IDS.has(`${item.kind}:${item.slug}`));

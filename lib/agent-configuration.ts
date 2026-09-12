@@ -12,6 +12,7 @@ export const RECEIPT_PATH = '/home/user/.agent37-gateway/workspace/.legitmate/re
 
 const AGENCY_SLUGS = new Set(AGENCY_AGENTS.map((agent) => agent.slug))
 const APPROVED_MODELS = new Set(['nous-default', 'nous-reasoning', 'surplus-capacity'])
+const SURPLUS_MODEL_ID = /^surplus\/[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/
 const APPROVED_CAPABILITIES = new Set([
   ...HERMES_SKILLS.map((item) => `skill:${item.slug}`),
   ...HERMES_PLUGINS.map((item) => `plugin:${item.slug}`),
@@ -61,7 +62,7 @@ export function parseAgentConfiguration(value: unknown, ownerSubject: string): A
   if (!/^[A-Za-z0-9:_-]{3,160}$/.test(ownerSubject)) throw new ConfigurationError('INVALID_OWNER')
   if (input.template !== 'agent37-hermes') throw new ConfigurationError('TEMPLATE_NOT_APPROVED')
   if (typeof input.agency_agent_slug !== 'string' || !AGENCY_SLUGS.has(input.agency_agent_slug)) throw new ConfigurationError('AGENCY_NOT_APPROVED')
-  if (typeof input.model !== 'string' || !APPROVED_MODELS.has(input.model)) throw new ConfigurationError('MODEL_NOT_APPROVED')
+  if (typeof input.model !== 'string' || (!APPROVED_MODELS.has(input.model) && !SURPLUS_MODEL_ID.test(input.model))) throw new ConfigurationError('MODEL_NOT_APPROVED')
   if (!Array.isArray(input.capabilities) || input.capabilities.length > 16) throw new ConfigurationError('TOO_MANY_CAPABILITIES')
   if (input.capabilities.some((item) => typeof item !== 'string' || !APPROVED_CAPABILITIES.has(item))) throw new ConfigurationError('CAPABILITY_NOT_APPROVED')
   const capabilityIds = [...new Set(input.capabilities as string[])].sort()
