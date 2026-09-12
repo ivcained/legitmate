@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { applyAgentConfiguration } from '../../../../lib/apply-configuration'
+import { applyAgentConfiguration, commitAppliedReceipt } from '../../../../lib/apply-configuration'
 import { applyRuntimeConfiguration } from '../../../../lib/apply-runtime'
 import { ConfigurationError, parseAgentConfiguration } from '../../../../lib/agent-configuration'
 import { discoverModels } from '../../../../lib/model-discovery'
@@ -24,8 +24,9 @@ export async function POST(request: NextRequest) {
     const rawId = provisioned.instance.id
     if (typeof rawId !== 'string') throw new Agent37Error('AGENT37_ERROR', 502)
     try {
-      const receipt = await applyAgentConfiguration(rawId, configuration)
+      const prepared = await applyAgentConfiguration(rawId, configuration)
       const runtime = await applyRuntimeConfiguration(rawId, configuration)
+      const receipt = await commitAppliedReceipt(rawId, prepared, runtime)
       return Response.json({ ok: true, instance: provisioned.instance, configuration: receipt, runtime, replayed: provisioned.replayed }, { status: provisioned.replayed ? 200 : 201 })
     } catch (error) {
       const response = errorResponse(error)

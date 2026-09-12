@@ -8,13 +8,14 @@ import { parseAgentConfiguration } from '../lib/agent-configuration'
 
 const base = { client_request_id: 'runtime_request_1234', template: 'agent37-hermes', agency_agent_slug: 'ux-architect', capabilities: [], profile: { soul: '# Soul', user: '# User', agents: '# Agents' } }
 const defaultYaml = 'model:\n  provider: agent37\n  default: "nous-default"\n'
+const digest = 'a'.repeat(64)
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs() })
 
 describe('runtime configuration', () => {
   it('writes and verifies the selected default model', async () => {
     const config = parseAgentConfiguration({ ...base, model: 'nous-default' }, 'owner')
-    agent37.execInstance.mockResolvedValue({ exit_code: 0 })
+    agent37.execInstance.mockResolvedValue({ exit_code: 0, stdout: '' })
     agent37.instanceRequest.mockResolvedValue(new Response(defaultYaml))
     const receipt = await applyRuntimeConfiguration('ab12cd34ef', config)
     expect(receipt.model).toMatchObject({ provider: 'default', id: 'nous-default' })
@@ -32,7 +33,7 @@ describe('runtime configuration', () => {
     vi.stubEnv('SURPLUS_AGENT_PROXY_URL', 'https://proxy.example/v1')
     vi.stubEnv('SURPLUS_AGENT_PROXY_TOKEN', 'revocable-token')
     const yaml = 'model:\n  provider: "custom:surplus"\n  default: "model-a"\nproviders:\n  surplus:\n    api: "https://proxy.example/v1"\n    key_env: "SURPLUS_AGENT_PROXY_TOKEN"\n    transport: "openai_chat"\n    discover_models: false\n    models:\n      - "model-a"\n'
-    agent37.execInstance.mockResolvedValue({ exit_code: 0 })
+    agent37.execInstance.mockResolvedValue({ exit_code: 0, stdout: '' })
     agent37.instanceRequest.mockResolvedValue(new Response(yaml))
     const receipt = await applyRuntimeConfiguration('ab12cd34ef', config)
     const command = String(agent37.execInstance.mock.calls[0][1])
@@ -42,23 +43,31 @@ describe('runtime configuration', () => {
     expect(receipt.model).toMatchObject({ provider: 'surplus', id: 'model-a' })
   })
 
-  it('installs only selected allowlisted capabilities', async () => {
+  it('installs a pinned skill and records its artifact digest', async () => {
     const config = parseAgentConfiguration({ ...base, model: 'nous-default', capabilities: ['skill:privy'] }, 'owner')
-    agent37.execInstance.mockResolvedValue({ exit_code: 0 })
+    agent37.execInstance.mockResolvedValueOnce({ exit_code: 0, stdout: '' }).mockResolvedValueOnce({ exit_code: 0, stdout: digest })
     agent37.instanceRequest.mockResolvedValue(new Response(defaultYaml))
     const receipt = await applyRuntimeConfiguration('ab12cd34ef', config)
-    expect(agent37.execInstance.mock.calls.some(([, command]) => String(command).includes("git clone --quiet 'https://github.com/privy-io/privy-agentic-wallets-skill.git'") && String(command).includes("checkout --quiet '7f104aa118a891aca85cfebbd68bf9f4a2cd85e7'") && String(command).includes('/home/node/.hermes/skills/privy/SKILL.md'))).toBe(true)
-    expect(receipt.capabilities).toContainEqual(expect.objectContaining({ id: 'skill:privy', status: 'installed' }))
+    const commands = agent37.execInstance.mock.calls.map(([, command]) => String(command)).join('\n')
+    expect(commands).toContain("checkout --quiet '7f104aa118a891aca85cfebbd68bf9f4a2cd85e7'")
+    expect(receipt.capabilities).toContainEqual({ id: 'skill:privy', status: 'installed', source_revision: '7f104aa118a891aca85cfebbd68bf9f4a2cd85e7', artifact_sha256: digest })
   })
 
   it('installs and verifies the selected Agency router plugin at a pinned revision', async () => {
     const config = parseAgentConfiguration({ ...base, model: 'nous-default', capabilities: ['plugin:agency-agents-router'] }, 'owner')
-    agent37.execInstance.mockResolvedValue({ exit_code: 0 })
+    agent37.execInstance.mockResolvedValueOnce({ exit_code: 0, stdout: '' }).mockResolvedValueOnce({ exit_code: 0, stdout: digest })
     agent37.instanceRequest.mockResolvedValue(new Response(defaultYaml))
     const receipt = await applyRuntimeConfiguration('ab12cd34ef', config)
     const commands = agent37.execInstance.mock.calls.map(([, command]) => String(command)).join('\n')
     expect(commands).toContain("checkout --quiet '6d29a9b08785a0e49ffc9818bbdd381164c2df5f'")
     expect(commands).toContain('install.sh" --tool hermes')
-    expect(receipt.capabilities).toContainEqual(expect.objectContaining({ id: 'plugin:agency-agents-router', status: 'installed' }))
+    expect(receipt.capabilities).toContainEqual({ id: 'plugin:agency-agents-router', status: 'installed', source_revision: '6d29a9b08785a0e49ffc9818bbdd381164c2df5f', artifact_sha256: digest })
+  })
+
+  it('fails closed when verification output is missing', async () => {
+    const config = parseAgentConfiguration({ ...base, model: 'nous-default', capabilities: ['skill:privy'] }, 'owner')
+    agent37.execInstance.mockResolvedValueOnce({ exit_code: 0, stdout: '' }).mockResolvedValueOnce({ exit_code: 0, stdout: '' })
+    agent37.instanceRequest.mockResolvedValue(new Response(defaultYaml))
+    await expect(applyRuntimeConfiguration('ab12cd34ef', config)).rejects.toMatchObject({ code: 'CAPABILITY_VERIFICATION_FAILED' })
   })
 })

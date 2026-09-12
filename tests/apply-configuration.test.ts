@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { applyAgentConfiguration, readAgentConfiguration } from '../lib/apply-configuration'
+import { applyAgentConfiguration, commitAppliedReceipt, readAgentConfiguration, type AppliedReceipt } from '../lib/apply-configuration'
 import { CONFIGURATION_PATH, parseAgentConfiguration, IDENTITY_DESTINATIONS, RECEIPT_PATH } from '../lib/agent-configuration'
 
 const configuration = parseAgentConfiguration({
@@ -33,10 +33,11 @@ describe('Agent37 configuration application', () => {
       return new Response(expected, { status: 200 })
     })
 
-    const receipt = await applyAgentConfiguration('ab12cd34ef', configuration, { attempts: 1, delayMs: 0 })
+    const prepared = await applyAgentConfiguration('abc123def4', configuration, { attempts: 1, delayMs: 0 })
+    expect(prepared.config_id).toBe(configuration.config_id)
+    expect(prepared.files).toHaveLength(4)
+    const receipt = await commitAppliedReceipt('abc123def4', prepared, { model: { provider: 'default', id: 'nous-default', config_sha256: 'f'.repeat(64) }, capabilities: [] })
     expect(receipt.status).toBe('applied')
-    expect(receipt.config_id).toBe(configuration.config_id)
-    expect(receipt.files).toHaveLength(4)
     expect(calls.filter((call) => call.method === 'PUT')).toHaveLength(5)
     expect(calls.some((call) => call.url.includes(encodeURIComponent('../')))).toBe(false)
   })

@@ -11,14 +11,17 @@ const SKILL_INSTALLERS: Record<string, { repository: string; revision: string }>
     revision: '7f104aa118a891aca85cfebbd68bf9f4a2cd85e7',
   },
 }
-const PLUGIN_INSTALLERS: Record<string, string> = {
-  'agency-agents-router': '6d29a9b08785a0e49ffc9818bbdd381164c2df5f',
+const PLUGIN_INSTALLERS: Record<string, { repository: string; revision: string }> = {
+  'agency-agents-router': {
+    repository: 'https://github.com/msitarzewski/agency-agents.git',
+    revision: '6d29a9b08785a0e49ffc9818bbdd381164c2df5f',
+  },
 }
 const SHELL_SAFE = /^[A-Za-z0-9._/-]{1,160}$/
 
 export type RuntimeReceipt = {
   model: { provider: 'default' | 'surplus'; id: string; config_sha256: string }
-  capabilities: Array<{ id: string; status: 'installed'; evidence: string }>
+  capabilities: Array<{ id: string; status: 'installed'; source_revision: string; artifact_sha256: string }>
 }
 
 function quote(value: string) { return `'${value.replaceAll("'", "'\\''")}'` }
@@ -51,6 +54,11 @@ function providerConfig(model: string) {
   }
 }
 
+function output(result: Record<string, unknown>) {
+  if (result.exit_code !== 0 || typeof result.stdout !== 'string' || result.truncated === true) throw new Agent37Error('CAPABILITY_INSTALL_FAILED', 502)
+  return result.stdout.trim()
+}
+
 async function applyModel(instanceId: string, model: string) {
   const provider = providerConfig(model)
   const configPath = '/home/node/.hermes/config.yaml'
@@ -79,17 +87,19 @@ export async function applyRuntimeConfiguration(instanceId: string, configuratio
       if (!SKILLS.has(slug)) throw new Agent37Error('CAPABILITY_NOT_APPROVED', 400)
       const installer = SKILL_INSTALLERS[slug]
       if (!installer) throw new Agent37Error('CAPABILITY_NOT_INSTALLABLE', 400)
-      const result = await execInstance(instanceId, `tmp=$(mktemp -d) && git clone --quiet ${quote(installer.repository)} "$tmp/repo" && git -C "$tmp/repo" checkout --quiet ${quote(installer.revision)} && mkdir -p ${quote(`/home/node/.hermes/skills/${slug}`)} && cp "$tmp/repo/SKILL.md" ${quote(`/home/node/.hermes/skills/${slug}/SKILL.md`)} && if test -d "$tmp/repo/references"; then cp -R "$tmp/repo/references" ${quote(`/home/node/.hermes/skills/${slug}/references`)}; fi && rm -rf "$tmp" && test -f ${quote(`/home/node/.hermes/skills/${slug}/SKILL.md`)}`) as Record<string, unknown>
-      if (result.exit_code !== 0) throw new Agent37Error('CAPABILITY_INSTALL_FAILED', 502)
-      capabilities.push({ id: capabilityId, status: 'installed', evidence: `~/.hermes/skills/${slug}/SKILL.md@${installer.revision}` })
+      const path = `/home/node/.hermes/skills/${slug}`
+      const command = `tmp=$(mktemp -d) && git clone --quiet ${quote(installer.repository)} "$tmp/repo" && git -C "$tmp/repo" checkout --quiet ${quote(installer.revision)} && rm -rf ${quote(path)} && mkdir -p ${quote(path)} && cp "$tmp/repo/SKILL.md" ${quote(`${path}/SKILL.md`)} && if test -d "$tmp/repo/references"; then cp -R "$tmp/repo/references" ${quote(`${path}/references`)}; fi && sha256sum ${quote(`${path}/SKILL.md`)} | cut -d' ' -f1`
+      const digest = output(await execInstance(instanceId, command) as Record<string, unknown>)
+      if (!/^[a-f0-9]{64}$/.test(digest)) throw new Agent37Error('CAPABILITY_VERIFICATION_FAILED', 502)
+      capabilities.push({ id: capabilityId, status: 'installed', source_revision: installer.revision, artifact_sha256: digest })
     } else if (kind === 'plugin') {
       if (!PLUGINS.has(slug)) throw new Agent37Error('CAPABILITY_NOT_APPROVED', 400)
-      const revision = PLUGIN_INSTALLERS[slug]
-      if (!revision) throw new Agent37Error('CAPABILITY_NOT_INSTALLABLE', 400)
-      const command = `tmp=$(mktemp -d) && git clone --quiet ${quote('https://github.com/msitarzewski/agency-agents.git')} "$tmp/repo" && git -C "$tmp/repo" checkout --quiet ${quote(revision)} && HERMES_HOME=/home/node/.hermes "$tmp/repo/scripts/convert.sh" --tool hermes && HERMES_HOME=/home/node/.hermes "$tmp/repo/scripts/install.sh" --tool hermes --no-interactive --no-convert && rm -rf "$tmp" && HERMES_HOME=/home/node/.hermes hermes plugins list --enabled --json | python3 -c ${quote(`import json,sys; data=json.load(sys.stdin); assert any(item.get('name') == '${slug}' and item.get('status') == 'enabled' for item in data)`)}`
-      const result = await execInstance(instanceId, command) as Record<string, unknown>
-      if (result.exit_code !== 0) throw new Agent37Error('CAPABILITY_INSTALL_FAILED', 502)
-      capabilities.push({ id: capabilityId, status: 'installed', evidence: `hermes plugins list --enabled: ${slug}@${revision}` })
+      const installer = PLUGIN_INSTALLERS[slug]
+      if (!installer) throw new Agent37Error('CAPABILITY_NOT_INSTALLABLE', 400)
+      const command = `tmp=$(mktemp -d) && git clone --quiet ${quote(installer.repository)} "$tmp/repo" && git -C "$tmp/repo" checkout --quiet ${quote(installer.revision)} && HERMES_HOME=/home/node/.hermes "$tmp/repo/scripts/convert.sh" --tool hermes && HERMES_HOME=/home/node/.hermes "$tmp/repo/scripts/install.sh" --tool hermes --no-interactive --no-convert && rm -rf "$tmp" && HERMES_HOME=/home/node/.hermes hermes plugins list --enabled --json | python3 -c ${quote(`import json,sys; data=json.load(sys.stdin); assert any(item.get('name') == '${slug}' and item.get('status') == 'enabled' for item in data)`)} && find ${quote(`/home/node/.hermes/plugins/${slug}`)} -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1`
+      const digest = output(await execInstance(instanceId, command) as Record<string, unknown>)
+      if (!/^[a-f0-9]{64}$/.test(digest)) throw new Agent37Error('CAPABILITY_VERIFICATION_FAILED', 502)
+      capabilities.push({ id: capabilityId, status: 'installed', source_revision: installer.revision, artifact_sha256: digest })
     } else throw new Agent37Error('CAPABILITY_NOT_APPROVED', 400)
   }
   return { model: { provider: provider.provider, id: provider.id, config_sha256: createHash('sha256').update(actual).digest('hex') }, capabilities }

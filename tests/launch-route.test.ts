@@ -4,7 +4,7 @@ const agent37Mocks = vi.hoisted(() => ({ errorResponse: vi.fn() }))
 const auth = vi.hoisted(() => ({ requirePrincipal: vi.fn() }))
 const parser = vi.hoisted(() => ({ parseAgentConfiguration: vi.fn() }))
 const provisioner = vi.hoisted(() => ({ provisionConfiguredInstance: vi.fn(), parseResourceShape: vi.fn() }))
-const applicator = vi.hoisted(() => ({ applyAgentConfiguration: vi.fn() }))
+const applicator = vi.hoisted(() => ({ applyAgentConfiguration: vi.fn(), commitAppliedReceipt: vi.fn() }))
 const runtime = vi.hoisted(() => ({ applyRuntimeConfiguration: vi.fn() }))
 const models = vi.hoisted(() => ({ discoverModels: vi.fn() }))
 
@@ -52,6 +52,7 @@ describe('configured launch route', () => {
     provisioner.parseResourceShape.mockReturnValue({ cpu: 2, memory: 4, disk: 6 })
     provisioner.provisionConfiguredInstance.mockResolvedValue(provisioned)
     applicator.applyAgentConfiguration.mockResolvedValue(receipt)
+    applicator.commitAppliedReceipt.mockResolvedValue(receipt)
     runtime.applyRuntimeConfiguration.mockResolvedValue({ model: { provider: 'default', id: 'nous-default', config_sha256: 'a'.repeat(64) }, capabilities: [] })
     models.discoverModels.mockResolvedValue({ models: [{ id: 'surplus/model-a', provider: 'surplus', label: 'model-a' }], surplus: 'live' })
     agent37Mocks.errorResponse.mockImplementation((error: { code?: string; status?: number }) => Response.json({ ok: false, code: error.code ?? 'AGENT37_ERROR' }, { status: error.status ?? 502 }))
@@ -65,6 +66,8 @@ describe('configured launch route', () => {
     expect(parser.parseAgentConfiguration).toHaveBeenCalledWith(expect.any(Object), 'owner')
     expect(provisioner.provisionConfiguredInstance).toHaveBeenCalledWith(expect.objectContaining({ scope: 'legitmate:owner', configuration }))
     expect(applicator.applyAgentConfiguration).toHaveBeenCalledWith('ab12cd34ef', configuration)
+    expect(runtime.applyRuntimeConfiguration).toHaveBeenCalledWith('ab12cd34ef', configuration)
+    expect(applicator.commitAppliedReceipt).toHaveBeenCalledWith('ab12cd34ef', receipt, expect.any(Object))
   })
 
   it('returns validation errors before provisioning', async () => {

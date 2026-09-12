@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto'
 import { Agent37Error, instanceRequest } from './agent37'
 import { CONFIGURATION_PATH, RECEIPT_PATH, type AgentConfigurationV1, IDENTITY_DESTINATIONS } from './agent-configuration'
+import type { RuntimeReceipt } from './apply-runtime'
 
 export type AppliedReceipt = {
   schema_version: 1
   config_id: string
   status: 'applied'
   files: Array<{ role: 'configuration' | 'soul' | 'user' | 'agents'; path: string; sha256: string; bytes: number }>
+  runtime?: RuntimeReceipt
   verified_at: string
 }
 
@@ -24,6 +26,15 @@ async function writeFile(id: string, path: string, content: string) {
 async function readFile(id: string, path: string) {
   const response = await instanceRequest(id, `/v1/files/content?path=${encodeURIComponent(path)}`)
   return response.text()
+}
+
+function sources(configuration: AgentConfigurationV1) {
+  return [
+    { role: 'configuration' as const, path: CONFIGURATION_PATH, content: JSON.stringify(configuration) },
+    { role: 'soul' as const, path: IDENTITY_DESTINATIONS.soul, content: configuration.identity.soul },
+    { role: 'user' as const, path: IDENTITY_DESTINATIONS.user, content: configuration.identity.user },
+    { role: 'agents' as const, path: IDENTITY_DESTINATIONS.agents, content: configuration.identity.agents },
+  ]
 }
 
 export type ConfigurationVerification = {
@@ -45,7 +56,7 @@ export async function readAgentConfiguration(instanceId: string): Promise<{
     receipt = JSON.parse(await readFile(instanceId, RECEIPT_PATH)) as AppliedReceipt
   } catch { throw new Agent37Error('CONFIGURATION_NOT_FOUND', 404) }
   let configuration: AgentConfigurationV1 | null = null
-  try { configuration = JSON.parse(rawConfiguration) as AgentConfigurationV1 } catch { /* reported as configuration drift below */ }
+  try { configuration = JSON.parse(rawConfiguration) as AgentConfigurationV1 } catch { /* reported as drift below */ }
   if (!receipt?.config_id) throw new Agent37Error('CONFIGURATION_CORRUPT', 409)
   const expectedPaths: Record<AppliedReceipt['files'][number]['role'], string> = { configuration: CONFIGURATION_PATH, soul: IDENTITY_DESTINATIONS.soul, user: IDENTITY_DESTINATIONS.user, agents: IDENTITY_DESTINATIONS.agents }
   const roles = new Set(receipt.files?.map((file) => file.role))
@@ -66,7 +77,7 @@ export async function readAgentConfiguration(instanceId: string): Promise<{
       files.push({ role: expected.role, expected_sha256: expected.sha256, matches: false })
     }
   }
-  const verified = Boolean(configuration && configuration.config_id === receipt.config_id && files.length === 4 && files.every((file) => file.matches))
+  const verified = Boolean(configuration && configuration.config_id === receipt.config_id && receipt.runtime && files.length === 4 && files.every((file) => file.matches))
   return { status: verified ? 'applied' : 'drifted', configuration, receipt, verification: { verified, checked_at: new Date().toISOString(), files } }
 }
 
@@ -74,7 +85,7 @@ export async function applyAgentConfiguration(
   instanceId: string,
   configuration: AgentConfigurationV1,
   options: { attempts?: number; delayMs?: number } = {},
-): Promise<AppliedReceipt> {
+): Promise<Omit<AppliedReceipt, 'status' | 'runtime'>> {
   const attempts = options.attempts ?? 45
   const delayMs = options.delayMs ?? 2000
   let healthy = false
@@ -86,21 +97,18 @@ export async function applyAgentConfiguration(
   }
   if (!healthy) throw new Agent37Error('AGENT_NOT_READY', 503)
 
-  const sources = [
-    { role: 'configuration' as const, path: CONFIGURATION_PATH, content: JSON.stringify(configuration) },
-    { role: 'soul' as const, path: IDENTITY_DESTINATIONS.soul, content: configuration.identity.soul },
-    { role: 'user' as const, path: IDENTITY_DESTINATIONS.user, content: configuration.identity.user },
-    { role: 'agents' as const, path: IDENTITY_DESTINATIONS.agents, content: configuration.identity.agents },
-  ]
-  for (const file of sources) await writeFile(instanceId, file.path, file.content)
-
   const files: AppliedReceipt['files'] = []
-  for (const file of sources) {
+  for (const file of sources(configuration)) await writeFile(instanceId, file.path, file.content)
+  for (const file of sources(configuration)) {
     const actual = await readFile(instanceId, file.path)
     if (sha256(actual) !== sha256(file.content)) throw new Agent37Error('CONFIG_VERIFICATION_FAILED', 502)
     files.push({ role: file.role, path: file.path, sha256: sha256(actual), bytes: Buffer.byteLength(actual) })
   }
-  const receipt = { schema_version: 1 as const, config_id: configuration.config_id, status: 'applied' as const, files, verified_at: new Date().toISOString() }
+  return { schema_version: 1, config_id: configuration.config_id, files, verified_at: new Date().toISOString() }
+}
+
+export async function commitAppliedReceipt(instanceId: string, prepared: Omit<AppliedReceipt, 'status' | 'runtime'>, runtime: RuntimeReceipt): Promise<AppliedReceipt> {
+  const receipt: AppliedReceipt = { ...prepared, status: 'applied', runtime }
   await writeFile(instanceId, RECEIPT_PATH, JSON.stringify(receipt))
   const committed = await readFile(instanceId, RECEIPT_PATH)
   if (sha256(committed) !== sha256(JSON.stringify(receipt))) throw new Agent37Error('RECEIPT_WRITE_FAILED', 502)
