@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 
-export const AGENT37_BASE = (process.env.AGENT37_API_BASE ?? 'https://api.agent37.com/v1').replace(/\/$/, '')
+const API_BASE = 'https://api.agent37.com/v1'
 export const APPROVED_TEMPLATES = new Set([
   'agent37-hermes',
   'legitmate-youtube',

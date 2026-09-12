@@ -43,9 +43,9 @@ describe('agent configuration validation', () => {
 
   it('uses fixed server-owned identity destinations', () => {
     expect(IDENTITY_DESTINATIONS).toEqual({
-      soul: '/home/user/.hermes/SOUL.md',
-      user: '/home/user/.hermes/memories/USER.md',
-      agents: '/home/user/.agent37-gateway/workspace/AGENTS.md',
+      soul: '/home/node/.hermes/SOUL.md',
+      user: '/home/node/.hermes/memories/USER.md',
+      agents: '/home/node/.agent37-gateway/workspace/AGENTS.md',
     })
   })
 })

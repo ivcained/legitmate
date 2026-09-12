@@ -3,12 +3,12 @@ import { AGENCY_AGENTS } from './agency-agents'
 import { INSTALLABLE_HERMES_CAPABILITY_IDS } from './hermes-catalog'
 
 export const IDENTITY_DESTINATIONS = {
-  soul: '/home/user/.hermes/SOUL.md',
-  user: '/home/user/.hermes/memories/USER.md',
-  agents: '/home/user/.agent37-gateway/workspace/AGENTS.md',
+  soul: '/home/node/.hermes/SOUL.md',
+  user: '/home/node/.hermes/memories/USER.md',
+  agents: '/home/node/.agent37-gateway/workspace/AGENTS.md',
 } as const
-export const CONFIGURATION_PATH = '/home/user/.agent37-gateway/workspace/.legitmate/configuration.json'
-export const RECEIPT_PATH = '/home/user/.agent37-gateway/workspace/.legitmate/receipt.json'
+export const CONFIGURATION_PATH = '/home/node/.agent37-gateway/workspace/.legitmate/configuration.json'
+export const RECEIPT_PATH = '/home/node/.agent37-gateway/workspace/.legitmate/receipt.json'
 
 const AGENCY_SLUGS = new Set(AGENCY_AGENTS.map((agent) => agent.slug))
 const APPROVED_MODELS = new Set(['nous-default', 'nous-reasoning', 'surplus-capacity'])

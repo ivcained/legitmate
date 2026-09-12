@@ -37,7 +37,7 @@ describe('runtime configuration', () => {
     const receipt = await applyRuntimeConfiguration('ab12cd34ef', config)
     const command = String(agent37.execInstance.mock.calls[0][1])
     expect(yaml).not.toContain('revocable-token')
-    expect(command).toContain('/home/user/.hermes/.env')
+    expect(command).toContain('/home/node/.hermes/.env')
     expect(command).toContain('chmod 600')
     expect(receipt.model).toMatchObject({ provider: 'surplus', id: 'model-a' })
   })
@@ -47,7 +47,7 @@ describe('runtime configuration', () => {
     agent37.execInstance.mockResolvedValue({ exit_code: 0 })
     agent37.instanceRequest.mockResolvedValue(new Response(defaultYaml))
     const receipt = await applyRuntimeConfiguration('ab12cd34ef', config)
-    expect(agent37.execInstance.mock.calls.some(([, command]) => String(command).includes("git clone --quiet 'https://github.com/privy-io/privy-agentic-wallets-skill.git'") && String(command).includes("checkout --quiet '7f104aa118a891aca85cfebbd68bf9f4a2cd85e7'") && String(command).includes('/home/user/.hermes/skills/privy/SKILL.md'))).toBe(true)
+    expect(agent37.execInstance.mock.calls.some(([, command]) => String(command).includes("git clone --quiet 'https://github.com/privy-io/privy-agentic-wallets-skill.git'") && String(command).includes("checkout --quiet '7f104aa118a891aca85cfebbd68bf9f4a2cd85e7'") && String(command).includes('/home/node/.hermes/skills/privy/SKILL.md'))).toBe(true)
     expect(receipt.capabilities).toContainEqual(expect.objectContaining({ id: 'skill:privy', status: 'installed' }))
   })
 
