@@ -5,10 +5,10 @@ Reach a defensible ETHGlobal submission in 1–2 days with one working, verifiab
 choose an Agency specialist → choose model/capabilities → edit profile → deploy an Agent37 workspace → run a real task → show evidence and honest limits.
 
 ## Next Step
-Build the continuous Agency deployment flow: choose from all 279 specialists → confirm profile → choose default or live Surplus model → choose approved skills/plugins → review and deploy with runtime configuration and capability installation verified.
+Finish the submission package and one load-bearing sponsor proof: verify a live The Graph query, capture the 2–4 minute demo, update the README/limitations/architecture evidence, rehearse from a clean browser, and submit before the deadline.
 
 ## Current Phase
-Phase 3.5 — Continuous specialist deployment and Surplus integration
+Phase 4–5 — Sponsor proof and submission package
 
 ## Phase 1 — Reconcile current build and lock scope [complete]
 - Confirmed repository, public deployment, latest successful CI, green unit/build checks, and explicit simulation boundary.
@@ -32,14 +32,14 @@ Phase 3.5 — Continuous specialist deployment and Surplus integration
 - Gate: evidence includes instance ID/status, applied files/config, exact task output, and no fabricated success state.
 - Hard stop: add no new features once a fresh user can complete setup, verification, and the safe test in under three minutes without manual repair.
 
-## Phase 3.5 — Continuous specialist deployment and Surplus integration [in_progress]
+## Phase 3.5 — Continuous specialist deployment and Surplus integration [complete]
 - Keep all 279 Agency specialists available in a bounded scrollable roster.
 - Guide one continuous sequence: specialist → profile confirmation → provider/model → capabilities → review/deploy.
 - Discover Surplus models server-side from `SURPLUS_BASE_URL`; keep keys and raw provider errors out of the browser.
 - Write the selected provider/model into persistent Hermes configuration.
 - Install only server-allowlisted skills/plugins after provisioning and verify their persistent artifacts before issuing the applied receipt.
 - Gate: a fresh user can select UI Designer, confirm profile, choose default or a discovered Surplus model, select capabilities, deploy, reopen, and verify the selected runtime configuration and installed artifacts.
-- Current verified slice: the five-step UI, server-side Surplus catalog validation, pinned Privy skill source, and pinned Agency router checkout pass local unit/build/browser gates. Live Agent37 installer proof still requires a configured launch and is not claimed yet.
+- Current verified slice: the five-step UI, server-side Surplus catalog validation, pinned Privy skill source, and pinned Agency router checkout pass local unit/build/browser gates. Both capability installers were exercised successfully on a disposable real Agent37 instance, which was deleted after verification.
 
 ## Phase 4 — One sponsor proof path [pending]
 - Prefer The Graph if credentials and a reproducible live query are available.
