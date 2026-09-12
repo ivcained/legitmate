@@ -5,10 +5,10 @@ Reach a defensible ETHGlobal submission in 1–2 days with one working, verifiab
 choose an Agency specialist → choose model/capabilities → edit profile → deploy an Agent37 workspace → run a real task → show evidence and honest limits.
 
 ## Next Step
-Wire canonical configuration parsing/application into the launch route, return a verified receipt, and expose reopen/readback status.
+Build the real Agent37 execution proof: verify the applied configuration, run one server-owned reversible task, and show the exact result with honest failure/retry states.
 
 ## Current Phase
-Phase 2 — Make specialist configuration real
+Phase 3 — Agent37 execution proof
 
 ## Phase 1 — Reconcile current build and lock scope [complete]
 - Confirmed repository, public deployment, latest successful CI, green unit/build checks, and explicit simulation boundary.
@@ -17,14 +17,14 @@ Phase 2 — Make specialist configuration real
 - Isolated Playwright on dedicated port 4310 and fixed stale test interactions/state reactivity.
 - Gate evidence: 20 unit tests passed, 2 Playwright tests passed, typecheck/build passed.
 
-## Phase 2 — Make specialist configuration real [in_progress]
+## Phase 2 — Make specialist configuration real [complete]
 - Persist selected Agency profile, model, capabilities, and edited files as a versioned configuration.
 - Apply only allowlisted model/capability identifiers.
 - Write only approved identity files inside the selected Agent37 workspace through the server-side BFF.
 - Add validation for path traversal, size limits, unsafe fields, and tenant ownership.
 - Gate: fresh user can select, edit, deploy, reopen, and verify the configuration; no secrets reach the browser.
 
-## Phase 3 — Agent37 execution proof [pending]
+## Phase 3 — Agent37 execution proof [in_progress]
 - Verify selected configuration is present in the running instance.
 - Run one real, reversible task through the existing Chat/Files surfaces.
 - Add explicit loading, failure, retry, and reset states.

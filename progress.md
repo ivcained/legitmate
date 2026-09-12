@@ -33,4 +33,6 @@
 - Added protected `GET /api/agents/instances/[id]/configuration` readback with applied/drifted status.
 - The UI now sends the canonical profile contract with a stable retry request ID, gates controls on an applied receipt, and renders readback evidence with an explicit runtime-activation limitation.
 - Full local gate after integration: 45 unit tests, 2 Playwright tests, lint, typecheck, and production build passed.
-- Next: independent spec/security review, then commit/push and verify production deployment before real Agent37 execution proof.
+- Phase 2 released as commit `7795768`; GitHub deployment `34671842285` completed successfully and production `/api/health` returned `ok`.
+- Phase 2 release gate: 45 unit tests, 2 Playwright tests, lint, typecheck, production build, remote SHA, and live health passed. Transitive dependency exceptions remain documented.
+- Phase 3 started: real Agent37 execution proof plus a dedicated Frontend & User Simplicity review lane.
