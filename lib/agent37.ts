@@ -93,8 +93,11 @@ export function createInstance(body: Record<string, unknown>) { return upstream(
 export function execInstance(id: string, command: string) { return upstream(`/instances/${encodeURIComponent(id)}/exec`, { method: 'POST', body: JSON.stringify({ command }) }) }
 export function actionInstance(id: string, action: string, body?: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: body ? JSON.stringify(body) : undefined }) }
 export function updateBudget(id: string, body: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/budget`, { method: 'PATCH', body: JSON.stringify(body) }) }
-export function signedUrl(id: string, port: number) { return upstream(`/instances/${encodeURIComponent(id)}/signed-url`, { method: 'POST', body: JSON.stringify({ port }) }) }
+export function signedUrl(id: string, port: number, ttlSeconds = 300) { return upstream(`/instances/${encodeURIComponent(id)}/signed-url`, { method: 'POST', body: JSON.stringify({ port, ttl_seconds: ttlSeconds }) }) }
 export function chat(id: string, body: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/chat`, { method: 'POST', body: JSON.stringify(body) }) }
+export function listIntegrationToolkits(id: string) { return upstream(`/instances/${encodeURIComponent(id)}/integrations/toolkits?limit=12`) }
+export function listIntegrationConnections(id: string) { return upstream(`/instances/${encodeURIComponent(id)}/integrations/connections`) }
+export function connectIntegration(id: string, toolkit: string, callbackUrl: string) { return upstream(`/instances/${encodeURIComponent(id)}/integrations/connect`, { method: 'POST', body: JSON.stringify({ toolkit, callbackUrl }) }) }
 
 export function errorResponse(error: unknown) {
   const e = error instanceof Agent37Error ? error : new Agent37Error('AGENT37_ERROR')

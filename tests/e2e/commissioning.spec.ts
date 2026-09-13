@@ -79,6 +79,7 @@ test.describe('LegitMate specialist setup', () => {
     await page.getByRole('button', { name: 'Review setup' }).click()
     await page.getByRole('button', { name: 'Deploy specialist' }).click()
     await expect(page.getByText(/Workspace recovered after the connection closed/)).toBeVisible()
+    await expect(page.locator('body > canvas')).toBeAttached()
     await expect(page.getByText(/server returned 502/i)).toHaveCount(0)
   })
 })

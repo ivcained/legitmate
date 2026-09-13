@@ -2,14 +2,15 @@
 
 import { getAccessToken } from '@privy-io/react-auth'
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import confetti from 'canvas-confetti'
 import { EmbeddedWallet } from '../components/embedded-wallet'
 import { AGENCY_AGENTS, AGENCY_AGENT_COUNT, type AgencyAgent } from '../lib/agency-agents'
 import { INSTALLABLE_HERMES_CAPABILITIES, type HermesCapability } from '../lib/hermes-catalog'
 import { agentActionRequest, type AgentAction } from '../lib/agent-actions'
+import { deploymentConfettiBursts } from '../lib/deployment-confetti'
 
 const LAUNCH_STORAGE_KEY = 'legitmate.launch'
-const surfacePorts = { chat: 9119, files: 8080, terminal: 7681, integrations: 9119, settings: 9119 } as const
 const stepLabels = ['Select agent', 'Profile', 'Provider & model', 'Capabilities', 'Review & deploy'] as const
 const resourceDefaults = { cpu: 2, memory: 4, disk: 6 }
 
@@ -87,6 +88,7 @@ export default function Home() {
   const [agentBusy, setAgentBusy] = useState(false)
   const [agentError, setAgentError] = useState('')
   const [resourceConfig, setResourceConfig] = useState(resourceDefaults)
+  const celebratedRequest = useRef<string | null>(null)
 
   useEffect(() => {
     fetch('/api/models')
@@ -142,6 +144,12 @@ export default function Home() {
     if (!launchState?.instance || launchState.phase !== 'applied') return
     const record: StoredLaunch = { version: 1, requestId: launchState.requestId, template: launchState.template, instance: launchState.instance }
     window.localStorage.setItem(LAUNCH_STORAGE_KEY, JSON.stringify(record))
+  }, [launchState])
+
+  useEffect(() => {
+    if (launchState?.phase !== 'applied' || celebratedRequest.current === launchState.requestId) return
+    celebratedRequest.current = launchState.requestId
+    for (const burst of deploymentConfettiBursts()) void confetti(burst)
   }, [launchState])
 
   const selectedModelChoice = availableModels.find((model) => model.id === selectedModel) ?? defaultModels[0]
@@ -303,25 +311,8 @@ export default function Home() {
     }
   }
 
-  const openAgentSurface = async (surface: keyof typeof surfacePorts) => {
-    const instance = launchState?.instance
-    if (!instance) return
-    setAgentBusy(true)
-    setAgentError('')
-    try {
-      const response = await authenticatedFetch(`/api/agents/instances/${instance.id}/signed-url`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ port: surfacePorts[surface] }),
-      })
-      const result = await responseBody(response)
-      if (!response.ok || result.ok !== true || !result.result || typeof result.result !== 'object' || typeof (result.result as Record<string, unknown>).url !== 'string') throw new Error(typeof result.message === 'string' ? result.message : 'Signed access is not available.')
-      window.open(String((result.result as Record<string, unknown>).url), '_blank', 'noopener,noreferrer')
-    } catch (error) {
-      setAgentError(error instanceof Error ? error.message : 'Could not mint a signed link.')
-    } finally {
-      setAgentBusy(false)
-    }
+  const openAgentWorkspace = (instanceId: string) => {
+    window.location.href = `/instances/${encodeURIComponent(instanceId)}`
   }
 
   return (
@@ -332,10 +323,11 @@ export default function Home() {
       </header>
 
       <div className="main setup-main">
-        <section className="setup-hero">
+        <section className="setup-hero t-hero-reveal">
           <div className="eyebrow">Specialist deployment</div>
           <h1>Choose an agent.<br /><em>Deploy with confidence.</em></h1>
           <p>Pick a specialist, confirm its profile, choose a model and capabilities, then review the exact setup before deployment.</p>
+          <div className="hero-signal" aria-hidden="true"><span>279 specialists</span><i /><span>verified setup</span><i /><span>owned workspace</span></div>
         </section>
 
         <nav className="setup-steps" aria-label="Setup progress">
@@ -354,7 +346,7 @@ export default function Home() {
           </aside>
         )}
 
-        <section className="setup-panel" aria-labelledby={`step-${currentStep}-title`}>
+        <section key={currentStep} className="setup-panel t-stage-enter" aria-labelledby={`step-${currentStep}-title`}>
           {currentStep === 1 && (
             <>
               <div className="step-heading">
@@ -363,7 +355,7 @@ export default function Home() {
               </div>
               <div className="agency-grid" aria-label={`${AGENCY_AGENT_COUNT} Agency specialists`}>
                 {AGENCY_AGENTS.map((agent) => (
-                  <button key={agent.slug} type="button" className={selectedAgency?.slug === agent.slug ? 'agency-card selected' : 'agency-card'} aria-pressed={selectedAgency?.slug === agent.slug} onClick={() => selectAgency(agent)}>
+                  <button key={agent.slug} type="button" className={selectedAgency?.slug === agent.slug ? 'agency-card selected t-card-select' : 'agency-card t-card-select'} aria-pressed={selectedAgency?.slug === agent.slug} onClick={() => selectAgency(agent)}>
                     <span className="agency-card-top"><span>{agent.division}</span>{selectedAgency?.slug === agent.slug && <b>Selected</b>}</span>
                     <strong>{agent.name}</strong><small>{agent.description}</small><em>“{agent.vibe}”</em>
                   </button>
@@ -384,7 +376,7 @@ export default function Home() {
           {currentStep === 3 && selectedAgency && (
             <>
               <div className="step-heading"><div><span className="eyebrow">Step 3 of 5</span><h2 id="step-3-title">Choose provider and model</h2><p>The default models are always available. Surplus models appear when returned by the configured server endpoint.</p></div></div>
-              <fieldset className="model-picker"><legend>Provider and model</legend>{availableModels.map((model) => <label key={model.id} className={selectedModel === model.id ? 'model-option selected' : 'model-option'}><input type="radio" name="model" value={model.id} checked={selectedModel === model.id} onChange={() => setSelectedModel(model.id)} /><span><strong>{model.label}</strong><small>{model.provider === 'surplus' ? `Surplus · ${model.id}` : `Default provider · ${model.id}`}</small></span></label>)}</fieldset>
+              <fieldset className="model-picker"><legend>Provider and model</legend>{availableModels.map((model) => <label key={model.id} className={selectedModel === model.id ? 'model-option selected t-choice' : 'model-option t-choice'}><input type="radio" name="model" value={model.id} checked={selectedModel === model.id} onChange={() => setSelectedModel(model.id)} /><span><strong>{model.label}</strong><small>{model.provider === 'surplus' ? `Surplus · ${model.id}` : `Default provider · ${model.id}`}</small></span></label>)}</fieldset>
               {!modelsLoaded && <p className="helper" role="status">Checking for Surplus models…</p>}
               {modelsLoaded && !availableModels.some((model) => model.provider === 'surplus') && <p className="helper">No Surplus models are configured. You can continue with a default model.</p>}
               <div className="step-actions"><button className="secondary" type="button" onClick={() => setCurrentStep(2)}>← Back</button><button className="primary" type="button" onClick={() => setCurrentStep(4)}>Continue to capabilities →</button></div>
@@ -394,7 +386,7 @@ export default function Home() {
           {currentStep === 4 && selectedAgency && (
             <>
               <div className="step-heading"><div><span className="eyebrow">Step 4 of 5</span><h2 id="step-4-title">Add capabilities</h2><p>Only capabilities with a server-owned installer and post-install verification are shown. You can also deploy without extras.</p></div><strong className="roster-count">{selectedCapabilities.length} selected</strong></div>
-              <div className="capability-list">{INSTALLABLE_HERMES_CAPABILITIES.map((capability) => { const capabilityId = `${capability.kind}:${capability.slug}`; return <label key={capabilityId} className={selectedCapabilities.includes(capabilityId) ? 'capability-row selected' : 'capability-row'}><input type="checkbox" checked={selectedCapabilities.includes(capabilityId)} onChange={() => toggleCapability(capability)} /><span className="capability-kind">{capability.kind}</span><span><strong>{capability.name}</strong><small>{capability.description}</small></span></label> })}</div>
+              <div className="capability-list">{INSTALLABLE_HERMES_CAPABILITIES.map((capability) => { const capabilityId = `${capability.kind}:${capability.slug}`; return <label key={capabilityId} className={selectedCapabilities.includes(capabilityId) ? 'capability-row selected t-choice' : 'capability-row t-choice'}><input type="checkbox" checked={selectedCapabilities.includes(capabilityId)} onChange={() => toggleCapability(capability)} /><span className="capability-kind">{capability.kind}</span><span><strong>{capability.name}</strong><small>{capability.description}</small></span></label> })}</div>
               <p className="helper">Selection does not prove installation. Installation is verified only after deployment.</p>
               <div className="step-actions"><button className="secondary" type="button" onClick={() => setCurrentStep(3)}>← Back</button><button className="primary" type="button" onClick={() => setCurrentStep(5)}>Review setup →</button></div>
             </>
@@ -406,8 +398,8 @@ export default function Home() {
               <dl className="review-list"><div><dt>Agent</dt><dd><strong>{selectedAgency.name}</strong><span>{selectedAgency.division} · {selectedAgency.slug}</span></dd><button type="button" onClick={() => setCurrentStep(1)}>Edit</button></div><div><dt>Profile</dt><dd><strong>Prepared profile confirmed</strong><span>soul.md · user.md · agents.md</span></dd><button type="button" onClick={() => setCurrentStep(2)}>Edit</button></div><div><dt>Provider & model</dt><dd><strong>{selectedModelChoice.provider === 'surplus' ? 'Surplus' : 'Default'}</strong><span>{selectedModelChoice.label} · {selectedModelChoice.id}</span></dd><button type="button" onClick={() => setCurrentStep(3)}>Edit</button></div><div><dt>Capabilities</dt><dd><strong>{selectedCapabilityDetails.length ? `${selectedCapabilityDetails.length} selected` : 'No extras selected'}</strong><span>{selectedCapabilityDetails.length ? selectedCapabilityDetails.map((item) => `${item.kind}: ${item.name}`).join(' · ') : 'Base workspace only'}</span></dd><button type="button" onClick={() => setCurrentStep(4)}>Edit</button></div></dl>
               <div className="deploy-bar"><div><strong>Ready to create {selectedAgency.name}</strong><span>Deployment applies the profile and then verifies configuration readback.</span></div><button className="primary deploy-button" type="button" disabled={launchState?.phase === 'launching'} onClick={() => launchAgent('agent37-hermes', selectedAgency.name)}>{launchState?.phase === 'launching' ? 'Deploying…' : 'Deploy specialist →'}</button></div>
 
-              {launchState && <section className={`launch-result ${launchState.phase}`} aria-live="polite">{launchState.phase === 'launching' && <div className="deployment-loader" role="status"><span className="deployment-loader-mark" aria-hidden="true"><i /><i /><i /></span><div><span className="eyebrow">Commissioning workspace</span><h3>{selectedAgency.name}</h3><p>Creating the Agent37 workspace, applying the profile, and verifying every file. This usually takes a minute.</p><div className="deployment-loader-track" aria-hidden="true"><span /></div></div></div>}<span className="eyebrow">Deployment status</span><h3>{launchState.instance?.name ?? selectedAgency.name}</h3><p>{launchState.message}</p>{launchState.receipt && <><div className="receipt-summary"><div><span>Configuration</span><strong className="mono">{launchState.receipt.config_id.slice(0, 12)}…</strong></div><div><span>Files</span><strong>{launchState.receipt.files.length} verified</strong></div><div><span>Model</span><strong>{launchState.runtime?.model.id ?? selectedModel}</strong></div></div><details><summary>Readback evidence</summary><ul>{launchState.receipt.files.map((file) => <li key={file.role}><span>{file.role}</span><span className="mono">{file.bytes} bytes · {file.sha256.slice(0, 8)}…</span></li>)}</ul></details><div className="proof-task"><h4>Safe readiness check</h4>{proofState.phase === 'succeeded' ? <div className="proof-success"><strong>✓ Test passed</strong><span>{proofState.output}</span></div> : <button className="secondary" type="button" disabled={proofState.phase === 'running'} onClick={runProofTask}>{proofState.phase === 'running' ? 'Running check…' : proofState.phase === 'failed' ? 'Try check again' : 'Run safe check'}</button>}{proofState.phase === 'failed' && <p role="alert">{proofState.message}</p>}</div><div className="graph-proof"><span className="eyebrow">Live sponsor proof / The Graph</span><h4>Analyze live Uniswap market data</h4><p>The server queries a live decentralized subgraph, then this deployed specialist turns the normalized evidence into a bounded research brief.</p>{graphState.phase === 'succeeded' && graphState.result ? <div className="graph-result" role="status"><div className="receipt-summary"><div><span>Verdict</span><strong>{graphState.result.analysis.verdict}</strong></div><div><span>Indexed block</span><strong>{graphState.result.market.source.blockNumber.toLocaleString()}</strong></div><div><span>ETH reference</span><strong>${graphState.result.market.market.ethPriceUSD.toLocaleString()}</strong></div></div><p><strong>Assistant assessment:</strong> {graphState.result.analysis.summary}</p><ul>{graphState.result.analysis.evidence.map((item) => <li key={item}>{item}</li>)}</ul><details><summary>Live Graph evidence</summary><p className="mono">Deployment {graphState.result.market.source.deployment}<br />Block {graphState.result.market.source.blockNumber} · {graphState.result.market.source.blockHash.slice(0, 14)}…<br />Top pool {graphState.result.market.market.topPools[0]?.pair} · {graphState.result.market.metrics.topPoolVolumeSharePct}% of indexed volume<br />Observed {new Date(graphState.result.market.source.observedAt).toLocaleString()}</p></details></div> : <button className="secondary" type="button" disabled={graphState.phase === 'running'} onClick={runGraphResearch}>{graphState.phase === 'running' ? 'Analyzing live data…' : graphState.phase === 'failed' ? 'Retry live analysis' : 'Analyze live subgraph'}</button>}{graphState.phase === 'failed' && <p role="alert">{graphState.message}</p>}</div></>}
-                {launchState.instance && launchState.phase === 'applied' && <div className="instance-tools"><label><span>Instance size</span><select value={`${resourceConfig.cpu}/${resourceConfig.memory}`} onChange={(event) => { const [cpu, memory] = event.target.value.split('/').map(Number); setResourceConfig((current) => ({ ...current, cpu, memory })) }}><option value="2/4">Standard · 2 vCPU / 4 GB</option><option value="4/8">Power · 4 vCPU / 8 GB</option><option value="8/16">Max · 8 vCPU / 16 GB</option></select></label><div><span>Open</span>{(['chat', 'files', 'terminal', 'integrations', 'settings'] as const).map((surface) => <button type="button" key={surface} disabled={agentBusy} onClick={() => openAgentSurface(surface)}>{surface}</button>)}</div><div><span>Lifecycle</span>{(['start', 'stop', 'restart'] as AgentAction[]).map((action) => <button type="button" key={action} disabled={agentBusy} onClick={() => agentAction(action)}>{action}</button>)}<button className="danger-control" type="button" disabled={agentBusy} onClick={() => agentAction('delete')}>delete</button></div></div>}
+              {launchState && <section className={`launch-result ${launchState.phase} t-panel-slide`} data-open="true" aria-live="polite">{launchState.phase === 'launching' && <div className="deployment-loader t-matrix-shell" role="status"><span className="deployment-loader-mark t-matrix-loader" aria-hidden="true"><i /><i /><i /></span><div><span className="eyebrow">Commissioning workspace</span><h3>{selectedAgency.name}</h3><p className="t-thinking-copy">Creating the Agent37 workspace, applying the profile, and verifying every file. This usually takes a minute.</p><div className="deployment-loader-track" aria-hidden="true"><span /></div></div></div>}<span className="eyebrow">Deployment status</span><h3>{launchState.instance?.name ?? selectedAgency.name}</h3><p>{launchState.message}</p>{launchState.receipt && <><div className="receipt-summary"><div><span>Configuration</span><strong className="mono">{launchState.receipt.config_id.slice(0, 12)}…</strong></div><div><span>Files</span><strong>{launchState.receipt.files.length} verified</strong></div><div><span>Model</span><strong>{launchState.runtime?.model.id ?? selectedModel}</strong></div></div><details><summary>Readback evidence</summary><ul>{launchState.receipt.files.map((file) => <li key={file.role}><span>{file.role}</span><span className="mono">{file.bytes} bytes · {file.sha256.slice(0, 8)}…</span></li>)}</ul></details><div className="proof-task"><h4>Safe readiness check</h4>{proofState.phase === 'succeeded' ? <div className="proof-success t-success-pop"><strong>✓ Test passed</strong><span>{proofState.output}</span></div> : <button className="secondary" type="button" disabled={proofState.phase === 'running'} onClick={runProofTask}>{proofState.phase === 'running' ? 'Running check…' : proofState.phase === 'failed' ? 'Try check again' : 'Run safe check'}</button>}{proofState.phase === 'failed' && <p role="alert">{proofState.message}</p>}</div><div className="graph-proof"><span className="eyebrow">Live sponsor proof / The Graph</span><h4>Analyze live Uniswap market data</h4><p>The server queries a live decentralized subgraph, then this deployed specialist turns the normalized evidence into a bounded research brief.</p>{graphState.phase === 'succeeded' && graphState.result ? <div className="graph-result t-panel-slide" data-open="true" role="status"><div className="receipt-summary"><div><span>Verdict</span><strong>{graphState.result.analysis.verdict}</strong></div><div><span>Indexed block</span><strong>{graphState.result.market.source.blockNumber.toLocaleString()}</strong></div><div><span>ETH reference</span><strong>${graphState.result.market.market.ethPriceUSD.toLocaleString()}</strong></div></div><p><strong>Assistant assessment:</strong> {graphState.result.analysis.summary}</p><ul>{graphState.result.analysis.evidence.map((item) => <li key={item}>{item}</li>)}</ul><details><summary>Live Graph evidence</summary><p className="mono">Deployment {graphState.result.market.source.deployment}<br />Block {graphState.result.market.source.blockNumber} · {graphState.result.market.source.blockHash.slice(0, 14)}…<br />Top pool {graphState.result.market.market.topPools[0]?.pair} · {graphState.result.market.metrics.topPoolVolumeSharePct}% of indexed volume<br />Observed {new Date(graphState.result.market.source.observedAt).toLocaleString()}</p></details></div> : <button className="secondary" type="button" disabled={graphState.phase === 'running'} onClick={runGraphResearch}>{graphState.phase === 'running' ? 'Analyzing live data…' : graphState.phase === 'failed' ? 'Retry live analysis' : 'Analyze live subgraph'}</button>}{graphState.phase === 'failed' && <p role="alert">{graphState.message}</p>}</div></>}
+                {launchState.instance && launchState.phase === 'applied' && <div className="instance-tools"><label><span>Instance size</span><select value={`${resourceConfig.cpu}/${resourceConfig.memory}`} onChange={(event) => { const [cpu, memory] = event.target.value.split('/').map(Number); setResourceConfig((current) => ({ ...current, cpu, memory })) }}><option value="2/4">Standard · 2 vCPU / 4 GB</option><option value="4/8">Power · 4 vCPU / 8 GB</option><option value="8/16">Max · 8 vCPU / 16 GB</option></select></label><div><span>Workspace</span><button type="button" disabled={agentBusy} onClick={() => openAgentWorkspace(launchState.instance!.id)}>Open management →</button></div><div><span>Lifecycle</span>{(['start', 'stop', 'restart'] as AgentAction[]).map((action) => <button type="button" key={action} disabled={agentBusy} onClick={() => agentAction(action)}>{action}</button>)}<button className="danger-control" type="button" disabled={agentBusy} onClick={() => agentAction('delete')}>delete</button></div></div>}
                 {agentError && <p role="alert">{agentError}</p>}</section>}
               <div className="step-actions"><button className="secondary" type="button" onClick={() => setCurrentStep(4)}>← Back</button></div>
             </>
