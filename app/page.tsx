@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Search } from 'lucide-react'
 import { SoundToggle } from '../components/ui-sounds'
 import { EmbeddedWallet } from '../components/embedded-wallet'
 import { AGENCY_AGENTS, AGENCY_AGENT_COUNT, type AgencyAgent } from '../lib/agency-agents'
@@ -79,6 +82,7 @@ async function responseBody(response: Response) {
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(1)
+  const [agentQuery, setAgentQuery] = useState('')
   const [selectedAgency, setSelectedAgency] = useState<AgencyAgent | null>(null)
   const [agencySoul, setAgencySoul] = useState('')
   const [agencyUser, setAgencyUser] = useState('')
@@ -158,6 +162,13 @@ export default function Home() {
   }, [launchState])
 
   const selectedModelChoice = availableModels.find((model) => model.id === selectedModel) ?? defaultModels[0]
+  const normalizedAgentQuery = agentQuery.trim().toLowerCase()
+  const visibleAgents = useMemo(
+    () => normalizedAgentQuery
+      ? AGENCY_AGENTS.filter((agent) => `${agent.name} ${agent.division} ${agent.description} ${agent.vibe}`.toLowerCase().includes(normalizedAgentQuery))
+      : AGENCY_AGENTS,
+    [normalizedAgentQuery],
+  )
   const selectedCapabilityDetails = useMemo(
     () => INSTALLABLE_HERMES_CAPABILITIES.filter((capability) => selectedCapabilities.includes(`${capability.kind}:${capability.slug}`)),
     [selectedCapabilities],
@@ -358,14 +369,25 @@ export default function Home() {
                 <div className="step-heading-copy"><span className="eyebrow">Step 1 of 5</span><h2 id="step-1-title">Select an agent</h2><p>Browse all {AGENCY_AGENT_COUNT} specialists. The roster stays in one scrollable list.</p></div>
                 <Badge variant="outline" className="roster-count t-number-pop">{AGENCY_AGENT_COUNT} agents</Badge>
               </div>
-              <div className="agency-grid" aria-label={`${AGENCY_AGENT_COUNT} Agency specialists`}>
-                {AGENCY_AGENTS.map((agent) => (
-                  <Button key={agent.slug} type="button" className={selectedAgency?.slug === agent.slug ? 'agency-card selected t-card-select' : 'agency-card t-card-select'} aria-pressed={selectedAgency?.slug === agent.slug} onClick={() => selectAgency(agent)}>
-                    <span className="agency-card-top"><span>{agent.division}</span>{selectedAgency?.slug === agent.slug && <b>Selected</b>}</span>
-                    <strong>{agent.name}</strong><small>{agent.description}</small><em>“{agent.vibe}”</em>
-                  </Button>
-                ))}
+              <div className="roster-toolbar">
+                <label className="agent-search">
+                  <Search aria-hidden="true" />
+                  <span className="sr-only">Search specialists</span>
+                  <Input type="search" value={agentQuery} onChange={(event) => setAgentQuery(event.target.value)} placeholder="Search specialists" />
+                </label>
+                <Badge variant="outline" className="roster-count t-number-pop">{visibleAgents.length} of {AGENCY_AGENT_COUNT}</Badge>
               </div>
+              <ScrollArea className="agency-scroll" aria-label={`${visibleAgents.length} Agency specialists`}>
+                <div className="agency-grid">
+                  {visibleAgents.map((agent) => (
+                    <Button key={agent.slug} type="button" className={selectedAgency?.slug === agent.slug ? 'agency-card selected t-card-select' : 'agency-card t-card-select'} aria-pressed={selectedAgency?.slug === agent.slug} onClick={() => selectAgency(agent)}>
+                      <span className="agency-card-top"><span>{agent.division}</span>{selectedAgency?.slug === agent.slug && <b>Selected</b>}</span>
+                      <strong>{agent.name}</strong><small>{agent.description}</small><em>“{agent.vibe}”</em>
+                    </Button>
+                  ))}
+                </div>
+              </ScrollArea>
+              {visibleAgents.length === 0 && <div className="roster-empty" role="status"><strong>No matching specialists</strong><span>Try a role, division, or capability.</span></div>}
               <div className="step-actions"><span>{selectedAgency ? `${selectedAgency.name} is selected.` : 'Choose one specialist to continue.'}</span><Button className="primary" type="button" disabled={!selectedAgency} onClick={() => setCurrentStep(2)}>Continue to profile →</Button></div>
             </>
           )}

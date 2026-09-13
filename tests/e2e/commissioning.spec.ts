@@ -9,7 +9,13 @@ test.describe('LegitMate specialist setup', () => {
   test('moves from the full roster to a reviewable specialist setup', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Select an agent' })).toBeVisible()
     const roster = page.locator('.agency-grid')
-    await expect(roster).toHaveCSS('overflow-y', 'auto')
+    const rosterViewport = page.locator('[data-slot="scroll-area-viewport"]')
+    await expect(rosterViewport).toHaveCSS('overflow-y', 'scroll')
+    await expect(roster.getByRole('button')).toHaveCount(279)
+    await expect(page.getByPlaceholder('Search specialists')).toBeVisible()
+    await page.getByPlaceholder('Search specialists').fill('UI Designer')
+    await expect(roster.getByRole('button')).toHaveCount(1)
+    await page.getByPlaceholder('Search specialists').fill('')
     await expect(roster.getByRole('button')).toHaveCount(279)
     expect(await roster.getByRole('button').evaluateAll((cards) => cards.every((card) => {
       const element = card as HTMLElement

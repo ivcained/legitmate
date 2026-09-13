@@ -112,7 +112,7 @@ function ConfiguredWallet() {
   }
 
   if (!ready) return <div className="wallet-panel" role="status"><span className="eyebrow">Wallet / loading</span><strong>Checking secure sign-in…</strong></div>
-  if (!authenticated) return <div className="wallet-panel"><div><span className="eyebrow">Wallet / available</span><strong>Sign in to provision your workspace wallet.</strong><small>Privy creates an embedded wallet only for users who do not already have one.</small></div><button className="primary" onClick={login}>Sign in securely →</button></div>
+  if (!authenticated) return <div className="wallet-panel wallet-auth-cta"><div><span className="eyebrow">Wallet / available</span><strong>Sign in to deploy.</strong><small>Your embedded wallet is created only when needed.</small></div><button className="primary" onClick={login}>Sign in securely →</button></div>
 
   const fundingBoundary = !fundingConfigured
     ? configMessage || 'Add funds is unavailable until a production chain and token are configured.'

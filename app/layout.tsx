@@ -1,4 +1,5 @@
 import './globals.css'
+import './reference-redesign.css'
 import { PrivyShell } from '../components/privy-shell'
 import { UiSounds } from '../components/ui-sounds'
 import { Geist } from "next/font/google";
