@@ -1,6 +1,7 @@
 'use client'
 
 import { getAccessToken } from '@privy-io/react-auth'
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { EmbeddedWallet } from '../components/embedded-wallet'
 import { AGENCY_AGENTS, AGENCY_AGENT_COUNT, type AgencyAgent } from '../lib/agency-agents'
@@ -31,8 +32,9 @@ type ConfigurationReceipt = {
 }
 type RuntimeReceipt = {
   model: { provider: 'default' | 'surplus'; id: string; config_sha256: string }
-  capabilities: Array<{ id: string; status: 'available' | 'installed'; evidence: string }>
+  capabilities: Array<{ id: string; status: 'available' | 'installed'; evidence?: string; source_revision?: string; artifact_sha256?: string }>
 }
+type StoredConfiguration = { agency?: { slug?: string }; identity?: { soul?: string; user?: string; agents?: string }; runtime?: { model?: string; capability_ids?: string[] } }
 type LaunchState = {
   template: string
   phase: 'launching' | 'applied' | 'failed'
@@ -43,6 +45,7 @@ type LaunchState = {
   runtime?: RuntimeReceipt
 }
 type ProofState = { phase: 'idle' | 'running' | 'succeeded' | 'failed'; key?: string; output?: string; executionId?: string; message?: string }
+type GraphState = { phase: 'idle' | 'running' | 'succeeded' | 'failed'; message?: string; result?: { market: { source: { blockNumber: number; blockHash: string; deployment: string; observedAt: string }; market: { ethPriceUSD: number; totalValueLockedUSD: number; topPools: Array<{ pair: string; volumeUSD: number }> }; metrics: { topPoolVolumeSharePct: number; volumeToTvlRatio: number } }; analysis: { verdict: string; summary: string; evidence: string[] } } }
 type ModelChoice = { id: string; label: string; provider: 'default' | 'surplus' }
 
 const defaultModels: ModelChoice[] = [
@@ -58,6 +61,16 @@ function profileFor(agent: AgencyAgent) {
   }
 }
 
+async function responseBody(response: Response) {
+  const contentType = response.headers.get('content-type') ?? ''
+  const text = await response.text()
+  if (contentType.includes('application/json')) {
+    try { return JSON.parse(text) as Record<string, unknown> } catch { /* handled below */ }
+  }
+  const requestId = response.headers.get('cf-ray') ?? response.headers.get('x-request-id')
+  throw new Error(`The server returned ${response.status} ${response.statusText || 'an unexpected response'}${requestId ? ` · request ${requestId}` : ''}. Please retry; if it continues, the service may be deploying.`)
+}
+
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(1)
   const [selectedAgency, setSelectedAgency] = useState<AgencyAgent | null>(null)
@@ -70,6 +83,7 @@ export default function Home() {
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([])
   const [launchState, setLaunchState] = useState<LaunchState | null>(null)
   const [proofState, setProofState] = useState<ProofState>({ phase: 'idle' })
+  const [graphState, setGraphState] = useState<GraphState>({ phase: 'idle' })
   const [agentBusy, setAgentBusy] = useState(false)
   const [agentError, setAgentError] = useState('')
   const [resourceConfig, setResourceConfig] = useState(resourceDefaults)
@@ -101,9 +115,20 @@ export default function Home() {
       setLaunchState({ template: stored.template, phase: 'launching', requestId: stored.requestId, instance: stored.instance, message: 'Checking workspace configuration…' })
       authenticatedFetch(`/api/agents/instances/${stored.instance.id}/configuration`)
         .then(async (response) => {
-          const result = await response.json()
-          if (!response.ok || !result.ok || result.status !== 'applied') throw new Error(result.message ?? 'Saved configuration could not be verified.')
-          setLaunchState({ template: stored.template, phase: 'applied', requestId: stored.requestId, instance: stored.instance, receipt: result.receipt as ConfigurationReceipt, message: 'Configuration verified after reopen.' })
+          const result = await responseBody(response)
+          if (!response.ok || result.ok !== true || result.status !== 'applied') throw new Error(typeof result.message === 'string' ? result.message : 'Saved configuration could not be verified.')
+          const configuration = result.configuration as StoredConfiguration | undefined
+          const agency = AGENCY_AGENTS.find((agent) => agent.slug === configuration?.agency?.slug)
+          if (!agency || !configuration?.identity?.soul || !configuration.identity.user || !configuration.identity.agents) throw new Error('Saved specialist profile could not be restored.')
+          setSelectedAgency(agency)
+          setAgencySoul(configuration.identity.soul)
+          setAgencyUser(configuration.identity.user)
+          setAgencySkills(configuration.identity.agents)
+          setSelectedModel(configuration.runtime?.model ?? 'nous-default')
+          setSelectedCapabilities(configuration.runtime?.capability_ids ?? [])
+          setCurrentStep(5)
+          const receipt = result.receipt as (ConfigurationReceipt & { runtime?: RuntimeReceipt })
+          setLaunchState({ template: stored.template, phase: 'applied', requestId: stored.requestId, instance: stored.instance, receipt, runtime: receipt.runtime, message: 'Configuration verified after reopen.' })
         })
         .catch((error) => setLaunchState({ template: stored.template, phase: 'failed', requestId: stored.requestId, instance: stored.instance, message: error instanceof Error ? error.message : 'Saved configuration could not be verified.' }))
     } catch {
@@ -133,6 +158,7 @@ export default function Home() {
     setAgencySkills(profile.agents)
     setLaunchState(null)
     setProofState({ phase: 'idle' })
+    setGraphState({ phase: 'idle' })
   }
 
   const toggleCapability = (capability: HermesCapability) => {
@@ -145,6 +171,7 @@ export default function Home() {
   const launchAgent = async (template: string, label: string, resources = resourceConfig) => {
     if (!selectedAgency) return
     setProofState({ phase: 'idle' })
+    setGraphState({ phase: 'idle' })
     const requestId = launchState?.template === template && launchState.phase === 'failed' ? launchState.requestId : crypto.randomUUID()
     setLaunchState({ template, phase: 'launching', requestId, message: `Creating ${label} and applying its configuration…` })
     setAgentError('')
@@ -163,13 +190,13 @@ export default function Home() {
           profile: { soul: agencySoul, user: agencyUser, agents: agencySkills },
         }),
       })
-      const result = await response.json()
+      const result = await responseBody(response)
       const raw = result.instance as Record<string, unknown> | undefined
       if (!response.ok || !result.ok) {
         const failedInstance = raw?.id
           ? { id: String(raw.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString() }
           : undefined
-        setLaunchState({ template, phase: 'failed', requestId, message: result.message ?? 'Workspace creation failed.', instance: failedInstance })
+        setLaunchState({ template, phase: 'failed', requestId, message: typeof result.message === 'string' ? result.message : 'Workspace creation failed.', instance: failedInstance })
         return
       }
       const receipt = result.configuration as ConfigurationReceipt
@@ -207,11 +234,25 @@ export default function Home() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ idempotency_key: key }),
       })
-      const result = await response.json()
-      if (!response.ok || !result.ok || result.status !== 'succeeded') throw new Error(result.message ?? 'The readiness check did not finish.')
+      const result = await responseBody(response)
+      if (!response.ok || result.ok !== true || result.status !== 'succeeded') throw new Error(typeof result.message === 'string' ? result.message : 'The readiness check did not finish.')
       setProofState({ phase: 'succeeded', key, output: String(result.output_text), executionId: String(result.execution_id), message: 'Readiness check passed.' })
     } catch (error) {
       setProofState({ phase: 'failed', key, message: error instanceof Error ? error.message : 'The readiness check did not finish.' })
+    }
+  }
+
+  const runGraphResearch = async () => {
+    const instance = launchState?.instance
+    if (!instance || launchState.phase !== 'applied') return
+    setGraphState({ phase: 'running', message: 'Querying live Uniswap data through The Graph…' })
+    try {
+      const response = await authenticatedFetch(`/api/agents/instances/${instance.id}/graph-research`, { method: 'POST' })
+      const result = await responseBody(response)
+      if (!response.ok || result.ok !== true) throw new Error(typeof result.message === 'string' ? result.message : 'Live market research failed.')
+      setGraphState({ phase: 'succeeded', result: result as GraphState['result'], message: 'Live Graph evidence analyzed.' })
+    } catch (error) {
+      setGraphState({ phase: 'failed', message: error instanceof Error ? error.message : 'Live market research failed.' })
     }
   }
 
@@ -224,8 +265,8 @@ export default function Home() {
     try {
       const request = agentActionRequest(instance.id, action, resourceConfig)
       const response = await authenticatedFetch(request.url, request.init)
-      const result = await response.json()
-      if (!response.ok || !result.ok) throw new Error(result.message ?? 'Agent action is unavailable.')
+      const result = await responseBody(response)
+      if (!response.ok || result.ok !== true) throw new Error(typeof result.message === 'string' ? result.message : 'Agent action is unavailable.')
       if (action === 'delete') {
         setLaunchState(null)
         setProofState({ phase: 'idle' })
@@ -233,7 +274,7 @@ export default function Home() {
         setAgentError('Instance deleted.')
         return
       }
-      setLaunchState((current) => current ? { ...current, instance: { ...instance, status: result.instance?.status ?? (action === 'stop' ? 'stopped' : 'running') }, message: `Instance ${action} request accepted.` } : current)
+      setLaunchState((current) => current ? { ...current, instance: { ...instance, status: typeof result.status === 'string' ? result.status : (action === 'stop' ? 'stopped' : 'running') }, message: `Instance ${action} request accepted.` } : current)
     } catch (error) {
       setAgentError(error instanceof Error ? error.message : 'Agent action failed.')
     } finally {
@@ -252,9 +293,9 @@ export default function Home() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ port: surfacePorts[surface] }),
       })
-      const result = await response.json()
-      if (!response.ok || !result.ok || typeof result.result?.url !== 'string') throw new Error(result.message ?? 'Signed access is not available.')
-      window.open(result.result.url, '_blank', 'noopener,noreferrer')
+      const result = await responseBody(response)
+      if (!response.ok || result.ok !== true || !result.result || typeof result.result !== 'object' || typeof (result.result as Record<string, unknown>).url !== 'string') throw new Error(typeof result.message === 'string' ? result.message : 'Signed access is not available.')
+      window.open(String((result.result as Record<string, unknown>).url), '_blank', 'noopener,noreferrer')
     } catch (error) {
       setAgentError(error instanceof Error ? error.message : 'Could not mint a signed link.')
     } finally {
@@ -265,8 +306,8 @@ export default function Home() {
   return (
     <main className="shell">
       <header className="topbar">
-        <div className="brand"><span className="brand-mark">LM</span> LegitMate</div>
-        <EmbeddedWallet />
+        <Link className="brand" href="/"><span className="brand-mark">LM</span> LegitMate</Link>
+        <div className="topbar-actions"><Link className="top-link" href="/instances">My instances</Link><EmbeddedWallet /></div>
       </header>
 
       <div className="main setup-main">
@@ -344,7 +385,7 @@ export default function Home() {
               <dl className="review-list"><div><dt>Agent</dt><dd><strong>{selectedAgency.name}</strong><span>{selectedAgency.division} · {selectedAgency.slug}</span></dd><button type="button" onClick={() => setCurrentStep(1)}>Edit</button></div><div><dt>Profile</dt><dd><strong>Prepared profile confirmed</strong><span>soul.md · user.md · agents.md</span></dd><button type="button" onClick={() => setCurrentStep(2)}>Edit</button></div><div><dt>Provider & model</dt><dd><strong>{selectedModelChoice.provider === 'surplus' ? 'Surplus' : 'Default'}</strong><span>{selectedModelChoice.label} · {selectedModelChoice.id}</span></dd><button type="button" onClick={() => setCurrentStep(3)}>Edit</button></div><div><dt>Capabilities</dt><dd><strong>{selectedCapabilityDetails.length ? `${selectedCapabilityDetails.length} selected` : 'No extras selected'}</strong><span>{selectedCapabilityDetails.length ? selectedCapabilityDetails.map((item) => `${item.kind}: ${item.name}`).join(' · ') : 'Base workspace only'}</span></dd><button type="button" onClick={() => setCurrentStep(4)}>Edit</button></div></dl>
               <div className="deploy-bar"><div><strong>Ready to create {selectedAgency.name}</strong><span>Deployment applies the profile and then verifies configuration readback.</span></div><button className="primary deploy-button" type="button" disabled={launchState?.phase === 'launching'} onClick={() => launchAgent('agent37-hermes', selectedAgency.name)}>{launchState?.phase === 'launching' ? 'Deploying…' : 'Deploy specialist →'}</button></div>
 
-              {launchState && <section className={`launch-result ${launchState.phase}`} aria-live="polite"><span className="eyebrow">Deployment status</span><h3>{launchState.instance?.name ?? selectedAgency.name}</h3><p>{launchState.message}</p>{launchState.receipt && <><div className="receipt-summary"><div><span>Configuration</span><strong className="mono">{launchState.receipt.config_id.slice(0, 12)}…</strong></div><div><span>Files</span><strong>{launchState.receipt.files.length} verified</strong></div><div><span>Model</span><strong>{launchState.runtime?.model.id ?? selectedModel}</strong></div></div><details><summary>Readback evidence</summary><ul>{launchState.receipt.files.map((file) => <li key={file.role}><span>{file.role}</span><span className="mono">{file.bytes} bytes · {file.sha256.slice(0, 8)}…</span></li>)}</ul></details><div className="proof-task"><h4>Safe readiness check</h4>{proofState.phase === 'succeeded' ? <div className="proof-success"><strong>✓ Test passed</strong><span>{proofState.output}</span></div> : <button className="secondary" type="button" disabled={proofState.phase === 'running'} onClick={runProofTask}>{proofState.phase === 'running' ? 'Running check…' : proofState.phase === 'failed' ? 'Try check again' : 'Run safe check'}</button>}{proofState.phase === 'failed' && <p role="alert">{proofState.message}</p>}</div></>}
+              {launchState && <section className={`launch-result ${launchState.phase}`} aria-live="polite">{launchState.phase === 'launching' && <div className="deployment-loader" role="status"><span className="deployment-loader-mark" aria-hidden="true"><i /><i /><i /></span><div><span className="eyebrow">Commissioning workspace</span><h3>{selectedAgency.name}</h3><p>Creating the Agent37 workspace, applying the profile, and verifying every file. This usually takes a minute.</p><div className="deployment-loader-track" aria-hidden="true"><span /></div></div></div>}<span className="eyebrow">Deployment status</span><h3>{launchState.instance?.name ?? selectedAgency.name}</h3><p>{launchState.message}</p>{launchState.receipt && <><div className="receipt-summary"><div><span>Configuration</span><strong className="mono">{launchState.receipt.config_id.slice(0, 12)}…</strong></div><div><span>Files</span><strong>{launchState.receipt.files.length} verified</strong></div><div><span>Model</span><strong>{launchState.runtime?.model.id ?? selectedModel}</strong></div></div><details><summary>Readback evidence</summary><ul>{launchState.receipt.files.map((file) => <li key={file.role}><span>{file.role}</span><span className="mono">{file.bytes} bytes · {file.sha256.slice(0, 8)}…</span></li>)}</ul></details><div className="proof-task"><h4>Safe readiness check</h4>{proofState.phase === 'succeeded' ? <div className="proof-success"><strong>✓ Test passed</strong><span>{proofState.output}</span></div> : <button className="secondary" type="button" disabled={proofState.phase === 'running'} onClick={runProofTask}>{proofState.phase === 'running' ? 'Running check…' : proofState.phase === 'failed' ? 'Try check again' : 'Run safe check'}</button>}{proofState.phase === 'failed' && <p role="alert">{proofState.message}</p>}</div><div className="graph-proof"><span className="eyebrow">Live sponsor proof / The Graph</span><h4>Analyze live Uniswap market data</h4><p>The server queries a live decentralized subgraph, then this deployed specialist turns the normalized evidence into a bounded research brief.</p>{graphState.phase === 'succeeded' && graphState.result ? <div className="graph-result" role="status"><div className="receipt-summary"><div><span>Verdict</span><strong>{graphState.result.analysis.verdict}</strong></div><div><span>Indexed block</span><strong>{graphState.result.market.source.blockNumber.toLocaleString()}</strong></div><div><span>ETH reference</span><strong>${graphState.result.market.market.ethPriceUSD.toLocaleString()}</strong></div></div><p><strong>Assistant assessment:</strong> {graphState.result.analysis.summary}</p><ul>{graphState.result.analysis.evidence.map((item) => <li key={item}>{item}</li>)}</ul><details><summary>Live Graph evidence</summary><p className="mono">Deployment {graphState.result.market.source.deployment}<br />Block {graphState.result.market.source.blockNumber} · {graphState.result.market.source.blockHash.slice(0, 14)}…<br />Top pool {graphState.result.market.market.topPools[0]?.pair} · {graphState.result.market.metrics.topPoolVolumeSharePct}% of indexed volume<br />Observed {new Date(graphState.result.market.source.observedAt).toLocaleString()}</p></details></div> : <button className="secondary" type="button" disabled={graphState.phase === 'running'} onClick={runGraphResearch}>{graphState.phase === 'running' ? 'Analyzing live data…' : graphState.phase === 'failed' ? 'Retry live analysis' : 'Analyze live subgraph'}</button>}{graphState.phase === 'failed' && <p role="alert">{graphState.message}</p>}</div></>}
                 {launchState.instance && launchState.phase === 'applied' && <div className="instance-tools"><label><span>Instance size</span><select value={`${resourceConfig.cpu}/${resourceConfig.memory}`} onChange={(event) => { const [cpu, memory] = event.target.value.split('/').map(Number); setResourceConfig((current) => ({ ...current, cpu, memory })) }}><option value="2/4">Standard · 2 vCPU / 4 GB</option><option value="4/8">Power · 4 vCPU / 8 GB</option><option value="8/16">Max · 8 vCPU / 16 GB</option></select></label><div><span>Open</span>{(['chat', 'files', 'terminal', 'integrations', 'settings'] as const).map((surface) => <button type="button" key={surface} disabled={agentBusy} onClick={() => openAgentSurface(surface)}>{surface}</button>)}</div><div><span>Lifecycle</span>{(['start', 'stop', 'restart'] as AgentAction[]).map((action) => <button type="button" key={action} disabled={agentBusy} onClick={() => agentAction(action)}>{action}</button>)}<button className="danger-control" type="button" disabled={agentBusy} onClick={() => agentAction('delete')}>delete</button></div></div>}
                 {agentError && <p role="alert">{agentError}</p>}</section>}
               <div className="step-actions"><button className="secondary" type="button" onClick={() => setCurrentStep(4)}>← Back</button></div>

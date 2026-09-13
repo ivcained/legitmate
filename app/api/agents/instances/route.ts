@@ -1,10 +1,16 @@
 import { NextRequest } from 'next/server'
 import { APPROVED_TEMPLATES, cleanName, coalesce, createInstance, errorResponse, listOwnedInstances, readJson, requestId } from '../../../../lib/agent37'
 import { requirePrincipal } from '../../../../lib/auth'
+import { instanceSummary, type OwnedInstanceSummary } from '../../../../lib/instance-summary'
 
 export async function GET(request: NextRequest) {
-  try { const { scope } = await requirePrincipal(request); const payload = await listOwnedInstances(scope)
- return Response.json({ ok: true, data: payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>).data ?? payload : payload }) } catch (e) { return errorResponse(e) }
+  try {
+    const { scope } = await requirePrincipal(request)
+    const payload = await listOwnedInstances(scope)
+    const raw = payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>).data : payload
+    const data = Array.isArray(raw) ? raw.map(instanceSummary).filter((item): item is OwnedInstanceSummary => Boolean(item)) : []
+    return Response.json({ ok: true, data })
+  } catch (e) { return errorResponse(e) }
 }
 
 export async function POST(request: NextRequest) {

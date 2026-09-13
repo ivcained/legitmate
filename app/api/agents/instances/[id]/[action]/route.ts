@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { Agent37Error, cleanId, errorResponse, LIFECYCLE_ACTIONS, actionInstance, readJson, requireOwnedInstance } from '../../../../../../lib/agent37'
 import { requirePrincipal } from '../../../../../../lib/auth'
+import { parseResourceShape } from '../../../../../../lib/instance-provisioning'
+import { instanceSummary } from '../../../../../../lib/instance-summary'
 
 const RESIZE_KEYS = new Set(['cpu', 'memory', 'disk'])
 
@@ -13,9 +15,7 @@ function validatedActionBody(action: string, body: Record<string, unknown> | nul
     return { name: body.name.trim() }
   }
   if (Object.keys(body).some((key) => !RESIZE_KEYS.has(key))) throw new Agent37Error('INVALID_RESIZE', 400)
-  const cpu = body.cpu; const memory = body.memory; const disk = body.disk
-  if (!Number.isSafeInteger(cpu) || ![2, 4, 8].includes(cpu as number) || !Number.isSafeInteger(memory) || ![4, 8, 16].includes(memory as number) || !Number.isSafeInteger(disk) || Number(disk) < 2 || Number(disk) > 40) throw new Agent37Error('INVALID_RESIZE', 400)
-  return { cpu, memory, disk }
+  try { return parseResourceShape(body) } catch { throw new Agent37Error('INVALID_RESIZE', 400) }
 }
 
 type Context = { params: Promise<{ id: string; action: string }> }
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, context: Context) {
     await requireOwnedInstance(id, scope)
     const rawBody = action === 'resize' || action === 'update' ? await readJson(request) : null
     const body = validatedActionBody(action, rawBody)
-    return Response.json({ ok: true, instance: await actionInstance(id, action, body) })
+    return Response.json({ ok: true, instance: instanceSummary(await actionInstance(id, action, body)) })
   } catch (e) { return errorResponse(e) }
 }
 
@@ -40,6 +40,6 @@ export async function DELETE(request: NextRequest, context: Context) {
     if (!id || action !== 'delete') return Response.json({ ok: false, code: 'ACTION_NOT_ALLOWED' }, { status: 400 })
     const { scope } = await requirePrincipal(request)
     await requireOwnedInstance(id, scope)
-    return Response.json({ ok: true, instance: await actionInstance(id, 'delete') })
+    return Response.json({ ok: true, instance: instanceSummary(await actionInstance(id, 'delete')) })
   } catch (e) { return errorResponse(e) }
 }

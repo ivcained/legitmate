@@ -9,6 +9,10 @@ tsconfig.tsbuildinfo
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
 /test-results/
+/.next-e2e/
+/.next-e2e-mobile/
+/.next-e2e-instances/
+/.next-review3/
 .claude/
 .mcp.json
 opencode.json

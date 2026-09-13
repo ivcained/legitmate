@@ -36,13 +36,18 @@ test.describe('LegitMate specialist setup', () => {
     await expect(page.getByText('Start with an outcome.')).toHaveCount(0)
   })
 
-  test('supports keyboard selection and remains usable on mobile', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 })
-    const first = page.locator('.agency-grid .agency-card').first()
-    await first.focus()
-    await page.keyboard.press('Enter')
-    await expect(page.getByRole('button', { name: 'Continue to profile' })).toBeEnabled()
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
-    expect(overflow).toBe(false)
+
+  test('shows a useful deploy error when the proxy returns HTML', async ({ page }) => {
+    await page.route('**/api/agents/launch', async (route) => {
+      await route.fulfill({ status: 502, contentType: 'text/html', body: '<!DOCTYPE html><title>Bad Gateway</title>' })
+    })
+    await page.getByRole('button', { name: /UI Designer/ }).click()
+    await page.getByRole('button', { name: 'Continue to profile' }).click()
+    await page.getByRole('button', { name: 'Confirm profile' }).click()
+    await page.getByRole('button', { name: 'Continue to capabilities' }).click()
+    await page.getByRole('button', { name: 'Review setup' }).click()
+    await page.getByRole('button', { name: 'Deploy specialist' }).click()
+    await expect(page.getByText(/server returned 502/i)).toBeVisible()
+    await expect(page.getByText(/Unexpected token/)).toHaveCount(0)
   })
 })

@@ -26,14 +26,15 @@ describe('The Graph provider', () => {
   })
 
   it('queries the configured documented gateway without returning the API key', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1700000300 * 1000)
     process.env.GRAPH_API_KEY = 'server-secret'
     process.env.GRAPH_SUBGRAPH_ID = 'subgraph-id'
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ data: { _meta: { block: { number: 123 } } } }), { status: 200 }),
+      new Response(JSON.stringify({ data: { _meta: { block: { number: 123, hash: '0xabc', timestamp: 1700000000 }, deployment: 'QmDeployment' }, bundle: { ethPriceUSD: '4000' }, factory: { poolCount: '10', txCount: '20', totalVolumeUSD: '1000', totalValueLockedUSD: '500' }, pools: [{ id: '0xpool', token0: { symbol: 'WETH' }, token1: { symbol: 'USDC' }, feeTier: '500', volumeUSD: '400', totalValueLockedUSD: '200', txCount: '5' }] } }), { status: 200 }),
     )
 
     const result = await researchGraph()
-    expect(result).toEqual({ data: { _meta: { block: { number: 123 } } } })
+    expect(result).toMatchObject({ source: { blockNumber: 123, deployment: 'QmDeployment' }, market: { ethPriceUSD: 4000, poolCount: 10 } })
     expect(fetchMock).toHaveBeenCalledWith(
       'https://gateway.thegraph.com/api/server-secret/subgraphs/id/subgraph-id',
       expect.objectContaining({ method: 'POST' }),

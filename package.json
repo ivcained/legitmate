@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "next build",
-    "e2e": "playwright test"
+    "e2e": "playwright test && playwright test tests/e2e/instances.spec.ts --config=playwright.instances.config.ts && playwright test tests/e2e/mobile.spec.ts --config=playwright.mobile.config.ts"
   },
   "dependencies": {
     "@farcaster/mini-app-solana": "1.1.3",
