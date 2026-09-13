@@ -3,6 +3,7 @@
 import { getAccessToken } from '@privy-io/react-auth'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { SoundToggle } from '../../components/ui-sounds'
 
 type Instance = { id: string; name: string; status: string; template: string; url?: string; created?: number; specialist?: string; resources?: { cpu?: number; memory?: number; disk?: number }; budget?: { monthly_cap_micros?: number } }
 
@@ -34,7 +35,7 @@ export default function InstancesPage() {
   useEffect(() => { void load() }, [])
   const active = items.filter((item) => ['running', 'starting', 'waking'].includes(item.status)).length
 
-  return <main className="shell"><header className="topbar"><Link className="brand" href="/"><span className="brand-mark">LM</span> LegitMate</Link><Link className="top-link" href="/">Create specialist</Link></header><div className="main instances-page"><section className="instances-head"><div><span className="eyebrow">Account workspaces</span><h1>Your instances.</h1><p>Open any specialist you deployed with this account. Status comes directly from Agent37.</p></div><div className="instance-total"><strong>{items.length}</strong><span>total<br />{active} active</span></div></section>
+  return <main className="shell"><header className="topbar"><Link className="brand" href="/"><span className="brand-mark">LM</span> LegitMate</Link><div className="topbar-actions"><Link className="top-link" href="/">Create specialist</Link><SoundToggle /></div></header><div className="main instances-page"><section className="instances-head"><div><span className="eyebrow">Account workspaces</span><h1>Your instances.</h1><p>Open any specialist you deployed with this account. Status comes directly from Agent37.</p></div><div className="instance-total"><strong>{items.length}</strong><span>total<br />{active} active</span></div></section>
     {phase === 'loading' && <div className="instances-state" role="status"><span className="deployment-loader-track" aria-hidden="true"><span /></span><strong>Loading your workspaces…</strong></div>}
     {phase === 'error' && <div className="instances-state instances-error" role="alert"><strong>Instances unavailable</strong><p>{message}</p><button className="secondary" onClick={() => void load()}>Try again</button></div>}
     {phase === 'ready' && items.length === 0 && <div className="instances-state"><strong>No deployed specialists yet.</strong><p>Choose a specialist, confirm its setup, and deploy your first workspace.</p><Link className="button-link primary" href="/">Create a specialist →</Link></div>}

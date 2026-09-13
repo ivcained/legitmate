@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { SoundToggle } from '../components/ui-sounds'
 import { EmbeddedWallet } from '../components/embedded-wallet'
 import { AGENCY_AGENTS, AGENCY_AGENT_COUNT, type AgencyAgent } from '../lib/agency-agents'
 import { INSTALLABLE_HERMES_CAPABILITIES, type HermesCapability } from '../lib/hermes-catalog'
@@ -323,7 +324,7 @@ export default function Home() {
     <main className="shell">
       <header className="topbar">
         <Link className="brand" href="/"><span className="brand-mark">LM</span> LegitMate</Link>
-        <div className="topbar-actions"><Link className="top-link" href="/instances">My instances</Link><EmbeddedWallet /></div>
+        <div className="topbar-actions"><Link className="top-link" href="/instances">My instances</Link><SoundToggle /><EmbeddedWallet /></div>
       </header>
 
       <div className="main setup-main">
@@ -354,7 +355,7 @@ export default function Home() {
           {currentStep === 1 && (
             <>
               <div className="step-heading">
-                <div><span className="eyebrow">Step 1 of 5</span><h2 id="step-1-title">Select an agent</h2><p>Browse all {AGENCY_AGENT_COUNT} specialists. The roster stays in one scrollable list.</p></div>
+                <div className="step-heading-copy"><span className="eyebrow">Step 1 of 5</span><h2 id="step-1-title">Select an agent</h2><p>Browse all {AGENCY_AGENT_COUNT} specialists. The roster stays in one scrollable list.</p></div>
                 <Badge variant="outline" className="roster-count t-number-pop">{AGENCY_AGENT_COUNT} agents</Badge>
               </div>
               <div className="agency-grid" aria-label={`${AGENCY_AGENT_COUNT} Agency specialists`}>
