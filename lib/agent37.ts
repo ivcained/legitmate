@@ -108,6 +108,7 @@ export function errorResponse(error: unknown) {
     SURPLUS_NOT_CONFIGURED: 'Surplus is not configured for deployment yet. Choose the default model or ask an operator to add a revocable Surplus proxy.',
     CAPABILITY_NOT_INSTALLABLE: 'That capability does not have a verified Agent37 installer yet.',
     CAPABILITY_INSTALL_FAILED: 'The selected capability could not be installed and verified on the workspace.',
+    CAPABILITY_VERIFICATION_FAILED: 'The selected capability was installed, but its workspace verification failed. Retry to resume configuration safely.',
     RUNTIME_CONFIG_FAILED: 'The selected model configuration could not be written.',
     RUNTIME_CONFIG_VERIFICATION_FAILED: 'The selected model configuration could not be verified.',
   }

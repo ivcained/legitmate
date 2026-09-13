@@ -175,6 +175,25 @@ export default function Home() {
     const requestId = launchState?.template === template && launchState.phase === 'failed' ? launchState.requestId : crypto.randomUUID()
     setLaunchState({ template, phase: 'launching', requestId, message: `Creating ${label} and applying its configuration…` })
     setAgentError('')
+    const reconcile = async () => {
+      try {
+        setLaunchState({ template, phase: 'launching', requestId, message: `Checking whether ${label} was created…` })
+        const response = await authenticatedFetch(`/api/agents/launch/${encodeURIComponent(requestId)}`)
+        const result = await responseBody(response)
+        const recovered = result.instance as Record<string, unknown> | undefined
+        const recoveredConfiguration = result.configuration as { receipt?: ConfigurationReceipt } | undefined
+        if (result.state === 'complete' && recovered?.id && recoveredConfiguration?.receipt?.status === 'applied') {
+          const receipt = recoveredConfiguration.receipt
+          setLaunchState({ template, phase: 'applied', requestId, receipt, message: `Workspace recovered after the connection closed · ${receipt.files.length} profile files verified.`, instance: { id: String(recovered.id), name: label, status: String(recovered.status ?? 'provisioned'), template, url: typeof recovered.url === 'string' ? recovered.url : undefined, createdAt: new Date().toISOString(), usage: { spend: '$0.00', budget: '$5.00 / month' } } })
+          return true
+        }
+        if (result.state === 'pending' && recovered?.id) {
+          setLaunchState({ template, phase: 'failed', requestId, message: 'The workspace was created, but configuration verification is not complete. Retry deployment to resume safely without creating a duplicate.', instance: { id: String(recovered.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString() } })
+          return true
+        }
+      } catch { /* preserve the original launch error */ }
+      return false
+    }
     try {
       const response = await authenticatedFetch('/api/agents/launch', {
         method: 'POST',
@@ -193,21 +212,7 @@ export default function Home() {
       const result = await responseBody(response)
       const raw = result.instance as Record<string, unknown> | undefined
       if (!response.ok || !result.ok) {
-        if (response.status >= 500) {
-          const reconciliationResponse = await authenticatedFetch(`/api/agents/launch/${encodeURIComponent(requestId)}`)
-          const reconciliation = await responseBody(reconciliationResponse)
-          const recovered = reconciliation.instance as Record<string, unknown> | undefined
-          const recoveredConfiguration = reconciliation.configuration as { receipt?: ConfigurationReceipt } | undefined
-          if (reconciliationResponse.ok && reconciliation.ok === true && reconciliation.found === true && reconciliation.pending !== true && recovered?.id && recoveredConfiguration?.receipt?.status === 'applied') {
-            const receipt = recoveredConfiguration.receipt
-            setLaunchState({ template, phase: 'applied', requestId, receipt, message: `Workspace recovered after the connection closed · ${receipt.files.length} profile files verified.`, instance: { id: String(recovered.id), name: label, status: String(recovered.status ?? 'provisioned'), template, url: typeof recovered.url === 'string' ? recovered.url : undefined, createdAt: new Date().toISOString(), usage: { spend: '$0.00', budget: '$5.00 / month' } } })
-            return
-          }
-          if (reconciliationResponse.ok && reconciliation.ok === true && reconciliation.found === true) {
-            setLaunchState({ template, phase: 'failed', requestId, message: 'The workspace was created, but configuration verification is still finishing. Retry deployment to resume safely.', instance: recovered?.id ? { id: String(recovered.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString() } : undefined })
-            return
-          }
-        }
+        if (response.status >= 500 && await reconcile()) return
         const failedInstance = raw?.id
           ? { id: String(raw.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString() }
           : undefined
@@ -234,6 +239,7 @@ export default function Home() {
         },
       })
     } catch (error) {
+      if (await reconcile()) return
       setLaunchState({ template, phase: 'failed', requestId, message: error instanceof Error ? error.message : 'Launch could not be reached.' })
     }
   }

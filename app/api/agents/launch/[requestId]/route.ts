@@ -14,6 +14,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ req
       list: () => listOwnedInstances(scope),
       readConfiguration: readAgentConfiguration,
     })
-    return Response.json({ ok: true, ...result })
+    const status = result.state === 'complete' ? 200 : result.state === 'pending' ? 202 : 404
+    return Response.json({ ok: result.state !== 'absent', ...result }, { status })
   } catch (error) { return errorResponse(error) }
 }

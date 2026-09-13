@@ -8,7 +8,7 @@ describe('launch reconciliation', () => {
       list: async () => ({ data: [{ id: 'inst_1', name: 'Psychologist', status: 'running', metadata: { client_request_id: 'request-1234', config_id: 'cfg_1' } }] }),
       readConfiguration: async () => ({ status: 'applied', verification: { verified: true }, receipt: { config_id: 'cfg_1', status: 'applied', files: [] } }),
     })
-    expect(result).toMatchObject({ found: true, instance: { id: 'inst_1' }, configuration: { status: 'applied' } })
+    expect(result).toMatchObject({ state: 'complete', found: true, instance: { id: 'inst_1' }, configuration: { status: 'applied' } })
   })
 
   it('does not expose another operation and reports a pending matching instance honestly', async () => {
@@ -20,6 +20,15 @@ describe('launch reconciliation', () => {
       ] }),
       readConfiguration: async () => ({ status: 'drifted', verification: { verified: false } }),
     })
-    expect(result).toEqual({ found: true, pending: true, instance: { id: 'inst_1', metadata: { client_request_id: 'request-1234', config_id: 'cfg_1' } } })
+    expect(result).toEqual({ state: 'pending', found: true, pending: true, instance: { id: 'inst_1', metadata: { client_request_id: 'request-1234', config_id: 'cfg_1' } } })
+  })
+
+  it('does not mark a receipt for another configuration complete', async () => {
+    const result = await reconcileLaunchResult({
+      clientRequestId: 'request-1234',
+      list: async () => ({ data: [{ id: 'inst_1', metadata: { client_request_id: 'request-1234', config_id: 'cfg_expected' } }] }),
+      readConfiguration: async () => ({ status: 'applied', verification: { verified: true }, receipt: { config_id: 'cfg_other', status: 'applied' } }),
+    })
+    expect(result).toMatchObject({ state: 'pending', found: true, pending: true })
   })
 })
