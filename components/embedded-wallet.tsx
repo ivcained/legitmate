@@ -114,12 +114,17 @@ function ConfiguredWallet() {
   if (!ready) return <div className="wallet-panel" role="status"><span className="eyebrow">Wallet / loading</span><strong>Checking secure sign-in…</strong></div>
   if (!authenticated) return <div className="wallet-panel"><div><span className="eyebrow">Wallet / available</span><strong>Sign in to provision your workspace wallet.</strong><small>Privy creates an embedded wallet only for users who do not already have one.</small></div><button className="primary" onClick={login}>Sign in securely →</button></div>
 
+  const fundingBoundary = !fundingConfigured
+    ? configMessage || 'Add funds is unavailable until a production chain and token are configured.'
+    : ''
+  const withdrawalBoundary = !withdrawalConfigured
+    ? 'Withdraw is unavailable until a fixed recipient and production chain are configured.'
+    : ''
+
   return <div className="wallet-panel wallet-panel-rich">
     <div className="wallet-panel-head"><div><span className="eyebrow">Wallet / connected</span><strong>{address ? shorten(address) : 'Wallet is being provisioned…'}</strong><small>{user?.email?.address ?? user?.google?.email ?? 'Authenticated with Privy'} · embedded wallet</small></div><div className="wallet-balance"><span>Balance</span><strong>{formatBalance(balance)}</strong>{balanceError && <small role="alert">{balanceError}</small>}</div></div>
     <div className="wallet-actions"><button className="secondary" disabled={!address} onClick={() => address && navigator.clipboard?.writeText(address)}>Copy address</button><button className="secondary" disabled={!address || !fundingConfigured || busy} onClick={() => void fundWallet()}>Add funds</button><button className="secondary" disabled={!address || !withdrawalConfigured || busy} onClick={() => { setWithdrawOpen(!withdrawOpen); setActionError('') }}>Withdraw</button><button className="secondary" onClick={logout}>Sign out</button></div>
-    {configMessage && <small className="wallet-boundary">{configMessage}</small>}
-    {!fundingConfigured && !configMessage && <small className="wallet-boundary">Add funds is disabled until a production chain and token are explicitly configured.</small>}
-    {!withdrawalConfigured && <small className="wallet-boundary">Withdraw is disabled until a fixed recipient and production chain are explicitly configured. Recipients cannot be entered here.</small>}
+    {(fundingBoundary || withdrawalBoundary) && <div className="wallet-boundaries" role="note">{fundingBoundary && <small className="wallet-boundary">{fundingBoundary}</small>}{withdrawalBoundary && <small className="wallet-boundary">{withdrawalBoundary} Recipients cannot be changed here.</small>}</div>}
     {withdrawOpen && <div className="wallet-withdraw"><span className="control-label">Fixed recipient · {shorten(withdrawalRecipient)}</span><input aria-label="ETH amount" inputMode="decimal" placeholder="0.00 ETH" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={busy || !withdrawalConfigured} /><button className="primary" onClick={() => void withdraw()} disabled={busy || !withdrawalConfigured}>{busy ? 'Confirming…' : 'Review withdrawal'}</button></div>}
     {actionError && <small className="wallet-error" role="alert">{actionError}</small>}
     {actionStatus && <small className="wallet-status" role="status">{actionStatus}</small>}

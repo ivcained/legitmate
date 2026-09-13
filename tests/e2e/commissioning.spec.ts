@@ -13,7 +13,12 @@ test.describe('LegitMate specialist setup', () => {
     await expect(roster.getByRole('button')).toHaveCount(279)
     expect(await roster.getByRole('button').evaluateAll((cards) => cards.every((card) => {
       const element = card as HTMLElement
-      return getComputedStyle(element).whiteSpace === 'normal' && element.scrollWidth <= element.clientWidth
+      const bounds = element.getBoundingClientRect()
+      const childrenFit = [...element.children].every((child) => {
+        const childBounds = child.getBoundingClientRect()
+        return childBounds.left >= bounds.left && childBounds.right <= bounds.right && childBounds.top >= bounds.top && childBounds.bottom <= bounds.bottom
+      })
+      return getComputedStyle(element).whiteSpace === 'normal' && getComputedStyle(element).height !== '36px' && element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight && childrenFit
     }))).toBe(true)
 
     await page.getByRole('button', { name: /UI Designer/ }).click()
