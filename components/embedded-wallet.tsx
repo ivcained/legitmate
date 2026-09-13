@@ -46,7 +46,7 @@ export function EmbeddedWallet() {
 }
 
 function ConfiguredWallet() {
-  const { ready, authenticated, login, logout, user } = usePrivy()
+  const { ready, authenticated, login, logout } = usePrivy()
   const { wallets, ready: walletsReady } = useWallets()
   const { fund } = useFiatOnramp()
   const { sendTransaction } = useSendTransaction()
@@ -121,12 +121,15 @@ function ConfiguredWallet() {
     ? 'Withdraw is unavailable until a fixed recipient and production chain are configured.'
     : ''
 
-  return <div className="wallet-panel wallet-panel-rich">
-    <div className="wallet-panel-head"><div><span className="eyebrow">Wallet / connected</span><strong>{address ? shorten(address) : 'Wallet is being provisioned…'}</strong><small>{user?.email?.address ?? user?.google?.email ?? 'Authenticated with Privy'} · embedded wallet</small></div><div className="wallet-balance"><span>Balance</span><strong>{formatBalance(balance)}</strong>{balanceError && <small role="alert">{balanceError}</small>}</div></div>
-    <div className="wallet-actions"><button className="secondary" disabled={!address} onClick={() => address && navigator.clipboard?.writeText(address)}>Copy address</button><button className="secondary" disabled={!address || !fundingConfigured || busy} onClick={() => void fundWallet()}>Add funds</button><button className="secondary" disabled={!address || !withdrawalConfigured || busy} onClick={() => { setWithdrawOpen(!withdrawOpen); setActionError('') }}>Withdraw</button><button className="secondary" onClick={logout}>Sign out</button></div>
-    {(fundingBoundary || withdrawalBoundary) && <div className="wallet-boundaries" role="note">{fundingBoundary && <small className="wallet-boundary">{fundingBoundary}</small>}{withdrawalBoundary && <small className="wallet-boundary">{withdrawalBoundary} Recipients cannot be changed here.</small>}</div>}
-    {withdrawOpen && <div className="wallet-withdraw"><span className="control-label">Fixed recipient · {shorten(withdrawalRecipient)}</span><input aria-label="ETH amount" inputMode="decimal" placeholder="0.00 ETH" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={busy || !withdrawalConfigured} /><button className="primary" onClick={() => void withdraw()} disabled={busy || !withdrawalConfigured}>{busy ? 'Confirming…' : 'Review withdrawal'}</button></div>}
-    {actionError && <small className="wallet-error" role="alert">{actionError}</small>}
-    {actionStatus && <small className="wallet-status" role="status">{actionStatus}</small>}
-  </div>
+  return <details className="wallet-panel wallet-panel-rich wallet-menu">
+    <summary className="wallet-trigger"><span><span className="eyebrow">Wallet</span><strong>{address ? shorten(address) : 'Preparing wallet…'}</strong></span><span className="wallet-trigger-balance">{formatBalance(balance)}</span></summary>
+    <div className="wallet-menu-content">
+      <div className="wallet-panel-head"><div><span className="eyebrow">Wallet / connected</span><strong>{address ? shorten(address) : 'Wallet is being provisioned…'}</strong><small>Embedded wallet</small></div><div className="wallet-balance"><span>Balance</span><strong>{formatBalance(balance)}</strong>{balanceError && <small role="alert">{balanceError}</small>}</div></div>
+      <div className="wallet-actions"><button className="secondary" disabled={!address} onClick={() => address && navigator.clipboard?.writeText(address)}>Copy address</button><button className="secondary" disabled={!address || !fundingConfigured || busy} onClick={() => void fundWallet()}>Add funds</button><button className="secondary" disabled={!address || !withdrawalConfigured || busy} onClick={() => { setWithdrawOpen(!withdrawOpen); setActionError('') }}>Withdraw</button><button className="secondary" onClick={logout}>Sign out</button></div>
+      {(fundingBoundary || withdrawalBoundary) && <div className="wallet-boundaries" role="note">{fundingBoundary && <small className="wallet-boundary">{fundingBoundary}</small>}{withdrawalBoundary && <small className="wallet-boundary">{withdrawalBoundary} Recipients cannot be changed here.</small>}</div>}
+      {withdrawOpen && <div className="wallet-withdraw"><span className="control-label">Fixed recipient · {shorten(withdrawalRecipient)}</span><input aria-label="ETH amount" inputMode="decimal" placeholder="0.00 ETH" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={busy || !withdrawalConfigured} /><button className="primary" onClick={() => void withdraw()} disabled={busy || !withdrawalConfigured}>{busy ? 'Confirming…' : 'Review withdrawal'}</button></div>}
+      {actionError && <small className="wallet-error" role="alert">{actionError}</small>}
+      {actionStatus && <small className="wallet-status" role="status">{actionStatus}</small>}
+    </div>
+  </details>
 }

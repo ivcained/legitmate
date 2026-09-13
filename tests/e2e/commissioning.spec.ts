@@ -7,7 +7,7 @@ test.describe('LegitMate specialist setup', () => {
   })
 
   test('moves from the full roster to a reviewable specialist setup', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Select an agent' })).toBeVisible()
+    await expect(page.locator('.setup-steps button[aria-current="step"]')).toHaveText(/Select agent/)
     const roster = page.locator('.agency-grid')
     const rosterViewport = page.locator('[data-slot="scroll-area-viewport"]')
     await expect(rosterViewport).toHaveCSS('overflow-y', 'scroll')
