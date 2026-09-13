@@ -355,7 +355,7 @@ export default function Home() {
             <>
               <div className="step-heading">
                 <div><span className="eyebrow">Step 1 of 5</span><h2 id="step-1-title">Select an agent</h2><p>Browse all {AGENCY_AGENT_COUNT} specialists. The roster stays in one scrollable list.</p></div>
-                <Badge variant="outline" className="roster-count">{AGENCY_AGENT_COUNT} agents</Badge>
+                <Badge variant="outline" className="roster-count t-number-pop">{AGENCY_AGENT_COUNT} agents</Badge>
               </div>
               <div className="agency-grid" aria-label={`${AGENCY_AGENT_COUNT} Agency specialists`}>
                 {AGENCY_AGENTS.map((agent) => (

@@ -11,6 +11,10 @@ test.describe('LegitMate specialist setup', () => {
     const roster = page.locator('.agency-grid')
     await expect(roster).toHaveCSS('overflow-y', 'auto')
     await expect(roster.getByRole('button')).toHaveCount(279)
+    expect(await roster.getByRole('button').evaluateAll((cards) => cards.every((card) => {
+      const element = card as HTMLElement
+      return getComputedStyle(element).whiteSpace === 'normal' && element.scrollWidth <= element.clientWidth
+    }))).toBe(true)
 
     await page.getByRole('button', { name: /UI Designer/ }).click()
     await page.getByRole('button', { name: 'Continue to profile' }).click()
