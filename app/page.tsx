@@ -193,6 +193,21 @@ export default function Home() {
       const result = await responseBody(response)
       const raw = result.instance as Record<string, unknown> | undefined
       if (!response.ok || !result.ok) {
+        if (response.status >= 500) {
+          const reconciliationResponse = await authenticatedFetch(`/api/agents/launch/${encodeURIComponent(requestId)}`)
+          const reconciliation = await responseBody(reconciliationResponse)
+          const recovered = reconciliation.instance as Record<string, unknown> | undefined
+          const recoveredConfiguration = reconciliation.configuration as { receipt?: ConfigurationReceipt } | undefined
+          if (reconciliationResponse.ok && reconciliation.ok === true && reconciliation.found === true && reconciliation.pending !== true && recovered?.id && recoveredConfiguration?.receipt?.status === 'applied') {
+            const receipt = recoveredConfiguration.receipt
+            setLaunchState({ template, phase: 'applied', requestId, receipt, message: `Workspace recovered after the connection closed · ${receipt.files.length} profile files verified.`, instance: { id: String(recovered.id), name: label, status: String(recovered.status ?? 'provisioned'), template, url: typeof recovered.url === 'string' ? recovered.url : undefined, createdAt: new Date().toISOString(), usage: { spend: '$0.00', budget: '$5.00 / month' } } })
+            return
+          }
+          if (reconciliationResponse.ok && reconciliation.ok === true && reconciliation.found === true) {
+            setLaunchState({ template, phase: 'failed', requestId, message: 'The workspace was created, but configuration verification is still finishing. Retry deployment to resume safely.', instance: recovered?.id ? { id: String(recovered.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString() } : undefined })
+            return
+          }
+        }
         const failedInstance = raw?.id
           ? { id: String(raw.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString() }
           : undefined
