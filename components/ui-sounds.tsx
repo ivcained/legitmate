@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Volume2, VolumeX } from 'lucide-react'
 import { CUES, DEFAULTS, makePatch, renderPatch, SoundPlayer, type Rendered } from 'quiet-fx'
+import { Button } from './ui/button'
 import { QUIET_FX_VOLUME, cueForButton } from '../lib/ui-sounds'
 
 const SOUND_PREFERENCE_KEY = 'legitmate.interface-sounds'
@@ -61,5 +63,5 @@ export function UiSounds({ children }: { children: ReactNode }) {
     if (cue && await player.current.enable().catch(() => false)) player.current.play(renderPatch(makePatch(cue, { ...DEFAULTS, voice: 'Felt', variant: 'Light' })))
   }
 
-  return <>{children}<button type="button" className="sound-toggle" aria-label="Interface sounds" aria-pressed={enabled} data-no-ui-sound onClick={() => void toggle()}><span aria-hidden="true">{enabled ? '◖))' : '◖×'}</span><span>Sounds {enabled ? 'on' : 'off'}</span></button></>
+  return <>{children}<Button type="button" variant="outline" size="lg" className="sound-toggle" aria-label={enabled ? 'Mute interface sounds' : 'Unmute interface sounds'} aria-pressed={enabled} data-no-ui-sound onClick={() => void toggle()}>{enabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}<span>Sounds {enabled ? 'on' : 'off'}</span></Button></>
 }
