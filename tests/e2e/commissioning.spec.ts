@@ -29,7 +29,7 @@ test.describe('LegitMate specialist setup', () => {
 
     await page.getByRole('button', { name: /UI Designer/ }).click()
     await page.getByRole('button', { name: 'Continue to profile' }).click()
-    await expect(page.getByRole('heading', { name: 'Confirm the profile' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Confirm the profile' })).toBeFocused()
     await expect(page.getByText('Review or edit profile files')).toBeVisible()
 
     await page.getByRole('button', { name: 'Confirm profile' }).click()
@@ -44,8 +44,11 @@ test.describe('LegitMate specialist setup', () => {
     await expect(agencyCapability).toBeVisible()
     await privyCapability.click()
 
-    await page.getByRole('button', { name: 'Review setup' }).click()
+    await page.getByRole('button', { name: 'Review setup →' }).click()
     await expect(page.getByRole('heading', { name: 'Review and deploy' })).toBeVisible()
+    await page.getByLabel('Instance size').selectOption('4/8')
+    await expect(page.getByText('4 vCPU · 8 GB memory')).toBeVisible()
+    await page.getByLabel('Instance size').selectOption('2/4')
     await expect(page.locator('.review-list').getByText('UI Designer', { exact: true })).toBeVisible()
     await expect(page.getByText('skill: privy')).toBeVisible()
     await expect(page.getByText('Start with an outcome.')).toHaveCount(0)
@@ -65,8 +68,31 @@ test.describe('LegitMate specialist setup', () => {
     await page.getByRole('button', { name: 'Continue to capabilities' }).click()
     await page.getByRole('button', { name: 'Review setup' }).click()
     await page.getByRole('button', { name: 'Deploy specialist' }).click()
-    await expect(page.getByText(/server returned 502/i)).toBeVisible()
+    await expect(page.getByText(/server returned 502/i)).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText(/Unexpected token/)).toHaveCount(0)
+  })
+
+  test('keeps reconciling a pending launch until configuration is complete', async ({ page }) => {
+    let checks = 0
+    await page.route('**/api/agents/launch/*', async (route) => {
+      checks += 1
+      if (checks < 3) {
+        await route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ ok: true, state: 'pending', instance: { id: 'inst_pending' } }) })
+        return
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, state: 'complete', instance: { id: 'inst_pending', status: 'running' }, configuration: { receipt: { config_id: 'cfg_1', status: 'applied', files: [] } } }) })
+    })
+    await page.route('**/api/agents/launch', async (route) => {
+      await route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ ok: true, pending: true }) })
+    })
+    await page.getByRole('button', { name: /UI Designer/ }).click()
+    await page.getByRole('button', { name: 'Continue to profile' }).click()
+    await page.getByRole('button', { name: 'Confirm profile' }).click()
+    await page.getByRole('button', { name: 'Continue to capabilities' }).click()
+    await page.getByRole('button', { name: 'Review setup' }).click()
+    await page.getByRole('button', { name: 'Deploy specialist' }).click()
+    await expect(page.getByText(/Workspace recovered after the connection closed/)).toBeVisible({ timeout: 15_000 })
+    expect(checks).toBe(3)
   })
 
   test('recovers a completed deployment after an HTML proxy response', async ({ page }) => {

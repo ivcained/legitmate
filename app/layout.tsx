@@ -1,6 +1,7 @@
 import './globals.css'
 import './reference-redesign.css'
 import './review-fixes.css'
+import './final-review.css'
 import { PrivyShell } from '../components/privy-shell'
 import { UiSounds } from '../components/ui-sounds'
 import { Geist } from "next/font/google";

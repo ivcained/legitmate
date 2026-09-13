@@ -29,9 +29,10 @@ type AgentInstance = {
   template: string
   url?: string
   createdAt: string
+  resources?: { cpu: number; memory: number; disk: number }
   usage?: { spend: string; budget: string }
 }
-type StoredLaunch = { version: 1; requestId: string; template: string; instance: AgentInstance }
+type StoredLaunch = { version: 1; requestId: string; template: string; instance: AgentInstance; resources: { cpu: number; memory: number; disk: number } }
 type ConfigurationReceipt = {
   schema_version: 1
   config_id: string
@@ -97,7 +98,17 @@ export default function Home() {
   const [agentBusy, setAgentBusy] = useState(false)
   const [agentError, setAgentError] = useState('')
   const [resourceConfig, setResourceConfig] = useState(resourceDefaults)
+  const [launchResources, setLaunchResources] = useState<typeof resourceDefaults | null>(null)
   const celebratedRequest = useRef<string | null>(null)
+  const previousStep = useRef(currentStep)
+  const stepPanel = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (previousStep.current !== currentStep) {
+      previousStep.current = currentStep
+      stepPanel.current?.querySelector<HTMLElement>('h2')?.focus()
+    }
+  }, [currentStep])
 
   useEffect(() => {
     fetch('/api/models')
@@ -119,11 +130,13 @@ export default function Home() {
       const raw = window.localStorage.getItem(LAUNCH_STORAGE_KEY)
       if (!raw) return
       const stored = JSON.parse(raw) as StoredLaunch
-      if (stored?.version !== 1 || !stored.instance?.id || !stored.requestId) {
+      if (stored?.version !== 1 || !stored.instance?.id || !stored.requestId || !stored.resources) {
         window.localStorage.removeItem(LAUNCH_STORAGE_KEY)
         return
       }
-      setLaunchState({ template: stored.template, phase: 'launching', requestId: stored.requestId, instance: stored.instance, message: 'Checking workspace configuration…' })
+      setResourceConfig(stored.resources)
+      setLaunchResources(stored.resources)
+      setLaunchState({ template: stored.template, phase: 'launching', requestId: stored.requestId, instance: { ...stored.instance, resources: stored.resources }, message: 'Checking workspace configuration…' })
       authenticatedFetch(`/api/agents/instances/${stored.instance.id}/configuration`)
         .then(async (response) => {
           const result = await responseBody(response)
@@ -139,7 +152,7 @@ export default function Home() {
           setSelectedCapabilities(configuration.runtime?.capability_ids ?? [])
           setCurrentStep(5)
           const receipt = result.receipt as (ConfigurationReceipt & { runtime?: RuntimeReceipt })
-          setLaunchState({ template: stored.template, phase: 'applied', requestId: stored.requestId, instance: stored.instance, receipt, runtime: receipt.runtime, message: 'Configuration verified after reopen.' })
+          setLaunchState({ template: stored.template, phase: 'applied', requestId: stored.requestId, instance: { ...stored.instance, resources: stored.resources }, receipt, runtime: receipt.runtime, message: 'Configuration verified after reopen.' })
         })
         .catch((error) => setLaunchState({ template: stored.template, phase: 'failed', requestId: stored.requestId, instance: stored.instance, message: error instanceof Error ? error.message : 'Saved configuration could not be verified.' }))
     } catch {
@@ -151,13 +164,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!launchState?.instance || launchState.phase !== 'applied') return
-    const record: StoredLaunch = { version: 1, requestId: launchState.requestId, template: launchState.template, instance: launchState.instance }
+    const resources = launchState.instance.resources ?? resourceConfig
+    const record: StoredLaunch = { version: 1, requestId: launchState.requestId, template: launchState.template, instance: { ...launchState.instance, resources }, resources }
     window.localStorage.setItem(LAUNCH_STORAGE_KEY, JSON.stringify(record))
-  }, [launchState])
+  }, [launchState, resourceConfig])
 
   useEffect(() => {
     if (launchState?.phase !== 'applied' || celebratedRequest.current === launchState.requestId) return
     celebratedRequest.current = launchState.requestId
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     for (const burst of deploymentConfettiBursts()) void confetti(burst)
   }, [launchState])
 
@@ -181,6 +196,7 @@ export default function Home() {
     setAgencyUser(profile.user)
     setAgencySkills(profile.agents)
     setLaunchState(null)
+    setLaunchResources(null)
     setProofState({ phase: 'idle' })
     setGraphState({ phase: 'idle' })
   }
@@ -192,30 +208,37 @@ export default function Home() {
     )
   }
 
-  const launchAgent = async (template: string, label: string, resources = resourceConfig) => {
+  const launchAgent = async (template: string, label: string, requestedResources = resourceConfig) => {
     if (!selectedAgency) return
+    const resources = launchResources ?? { ...requestedResources }
+    if (!launchResources) setLaunchResources(resources)
     setProofState({ phase: 'idle' })
     setGraphState({ phase: 'idle' })
     const requestId = launchState?.template === template && launchState.phase === 'failed' ? launchState.requestId : crypto.randomUUID()
     setLaunchState({ template, phase: 'launching', requestId, message: `Creating ${label} and applying its configuration…` })
     setAgentError('')
-    const reconcile = async () => {
-      try {
-        setLaunchState({ template, phase: 'launching', requestId, message: `Checking whether ${label} was created…` })
-        const response = await authenticatedFetch(`/api/agents/launch/${encodeURIComponent(requestId)}`)
-        const result = await responseBody(response)
-        const recovered = result.instance as Record<string, unknown> | undefined
-        const recoveredConfiguration = result.configuration as { receipt?: ConfigurationReceipt } | undefined
-        if (result.state === 'complete' && recovered?.id && recoveredConfiguration?.receipt?.status === 'applied') {
-          const receipt = recoveredConfiguration.receipt
-          setLaunchState({ template, phase: 'applied', requestId, receipt, message: `Workspace recovered after the connection closed · ${receipt.files.length} profile files verified.`, instance: { id: String(recovered.id), name: label, status: String(recovered.status ?? 'provisioned'), template, url: typeof recovered.url === 'string' ? recovered.url : undefined, createdAt: new Date().toISOString(), usage: { spend: '$0.00', budget: '$5.00 / month' } } })
-          return true
-        }
-        if (result.state === 'pending' && recovered?.id) {
-          setLaunchState({ template, phase: 'failed', requestId, message: 'The workspace was created, but configuration verification is not complete. Retry deployment to resume safely without creating a duplicate.', instance: { id: String(recovered.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString() } })
-          return true
-        }
-      } catch { /* preserve the original launch error */ }
+    const reconcile = async (attempts = 1) => {
+      let pendingInstance: Record<string, unknown> | undefined
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 2000))
+        try {
+          setLaunchState({ template, phase: 'launching', requestId, message: `Checking whether ${label} was created…` })
+          const response = await authenticatedFetch(`/api/agents/launch/${encodeURIComponent(requestId)}`)
+          const result = await responseBody(response)
+          const recovered = result.instance as Record<string, unknown> | undefined
+          const recoveredConfiguration = result.configuration as { receipt?: ConfigurationReceipt } | undefined
+          if (result.state === 'complete' && recovered?.id && recoveredConfiguration?.receipt?.status === 'applied') {
+            const receipt = recoveredConfiguration.receipt
+            setLaunchState({ template, phase: 'applied', requestId, receipt, message: `Workspace recovered after the connection closed · ${receipt.files.length} profile files verified.`, instance: { id: String(recovered.id), name: label, status: String(recovered.status ?? 'provisioned'), template, url: typeof recovered.url === 'string' ? recovered.url : undefined, createdAt: new Date().toISOString(), resources, usage: { spend: '$0.00', budget: '$5.00 / month' } } })
+            return true
+          }
+          if (result.state === 'pending' && recovered?.id) pendingInstance = recovered
+        } catch { /* preserve the original launch error */ }
+      }
+      if (pendingInstance?.id) {
+        setLaunchState({ template, phase: 'failed', requestId, message: 'The workspace was created, but configuration verification is not complete. Retry deployment to resume safely without creating a duplicate.', instance: { id: String(pendingInstance.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString(), resources } })
+        return true
+      }
       return false
     }
     try {
@@ -233,12 +256,18 @@ export default function Home() {
           profile: { soul: agencySoul, user: agencyUser, agents: agencySkills },
         }),
       })
-      const result = await responseBody(response)
+      const parsed = await responseBody(response)
+      const result = parsed as Record<string, unknown>
+      if (response.status === 202 || result.pending === true) {
+        if (await reconcile(5)) return
+        setLaunchState({ template, phase: 'failed', requestId, message: 'The request is still pending, but no workspace is visible yet. Check My instances, then retry with the same request.' })
+        return
+      }
       const raw = result.instance as Record<string, unknown> | undefined
       if (!response.ok || !result.ok) {
-        if (response.status >= 500 && await reconcile()) return
+        if ((response.status >= 500 || response.status === 424) && await reconcile(5)) return
         const failedInstance = raw?.id
-          ? { id: String(raw.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString() }
+          ? { id: String(raw.id), name: label, status: 'configuration pending', template, createdAt: new Date().toISOString(), resources }
           : undefined
         setLaunchState({ template, phase: 'failed', requestId, message: typeof result.message === 'string' ? result.message : 'Workspace creation failed.', instance: failedInstance })
         return
@@ -259,11 +288,12 @@ export default function Home() {
           template,
           url: typeof raw!.url === 'string' ? raw!.url : undefined,
           createdAt: new Date().toISOString(),
+          resources,
           usage: { spend: '$0.00', budget: '$5.00 / month' },
         },
       })
     } catch (error) {
-      if (await reconcile()) return
+      if (await reconcile(5)) return
       setLaunchState({ template, phase: 'failed', requestId, message: error instanceof Error ? error.message : 'Launch could not be reached.' })
     }
   }
@@ -314,6 +344,7 @@ export default function Home() {
       if (!response.ok || result.ok !== true) throw new Error(typeof result.message === 'string' ? result.message : 'Agent action is unavailable.')
       if (action === 'delete') {
         setLaunchState(null)
+        setLaunchResources(null)
         setProofState({ phase: 'idle' })
         window.localStorage.removeItem(LAUNCH_STORAGE_KEY)
         setAgentError('Instance deleted.')
@@ -333,17 +364,18 @@ export default function Home() {
 
   return (
     <main className="shell">
+      <a className="skip-link" href="#main-content">Skip to setup</a>
       <header className="topbar">
         <Link className="brand" href="/"><span className="brand-mark">LM</span> LegitMate</Link>
         <div className="topbar-actions"><Link className="top-link" href="/instances">My instances</Link><SoundToggle /><EmbeddedWallet /></div>
       </header>
 
-      <div className="main setup-main">
+      <div id="main-content" className="main setup-main">
         <section className="setup-hero t-hero-reveal">
           <div className="eyebrow">Specialist deployment</div>
           <h1>Choose an agent.<br /><em>Deploy with confidence.</em></h1>
           <p>Pick a specialist, confirm its profile, choose a model and capabilities, then review the exact setup before deployment.</p>
-          <div className="hero-signal" aria-hidden="true"><span>279 specialists</span><i /><span>verified setup</span><i /><span>owned workspace</span></div>
+          <div className="hero-signal"><span>279 specialists</span><i aria-hidden="true" /><span>verified setup</span><i aria-hidden="true" /><span>owned workspace</span></div>
         </section>
 
         <nav className="setup-steps" aria-label="Setup progress">
@@ -362,11 +394,11 @@ export default function Home() {
           </aside>
         )}
 
-        <section key={currentStep} className="setup-panel t-stage-enter" aria-labelledby={`step-${currentStep}-title`}>
+        <section ref={stepPanel} key={currentStep} className="setup-panel t-stage-enter" aria-labelledby={`step-${currentStep}-title`}>
           {currentStep === 1 && (
             <>
               <div className="step-heading">
-                <div className="step-heading-copy"><span className="eyebrow">Step 1 of 5</span><h2 id="step-1-title">Select an agent</h2><p>Browse all {AGENCY_AGENT_COUNT} specialists. The roster stays in one scrollable list.</p></div>
+                <div className="step-heading-copy"><span className="eyebrow">Step 1 of 5</span><h2 tabIndex={-1} id="step-1-title">Select an agent</h2><p>Browse all {AGENCY_AGENT_COUNT} specialists. The roster stays in one scrollable list.</p></div>
                 <Badge variant="outline" className="roster-count t-number-pop">{AGENCY_AGENT_COUNT} agents</Badge>
               </div>
               <div className="roster-toolbar">
@@ -394,7 +426,7 @@ export default function Home() {
 
           {currentStep === 2 && selectedAgency && (
             <>
-              <div className="step-heading"><div><span className="eyebrow">Step 2 of 5</span><h2 id="step-2-title">Confirm the profile</h2><p>These files define how {selectedAgency.name} works. The prepared profile is ready as-is.</p></div></div>
+              <div className="step-heading"><div><span className="eyebrow">Step 2 of 5</span><h2 tabIndex={-1} id="step-2-title">Confirm the profile</h2><p>These files define how {selectedAgency.name} works. The prepared profile is ready as-is.</p></div></div>
               <div className="profile-card"><div className="profile-identity"><span>{selectedAgency.division}</span><h3>{selectedAgency.name}</h3><p>{selectedAgency.description}</p><blockquote>“{selectedAgency.vibe}”</blockquote></div><details className="profile-files"><summary>Review or edit profile files</summary><div><label><span>soul.md</span><Textarea value={agencySoul} onChange={(event) => setAgencySoul(event.target.value)} /></label><label><span>user.md</span><Textarea value={agencyUser} onChange={(event) => setAgencyUser(event.target.value)} /></label><label><span>agents.md</span><Textarea value={agencySkills} onChange={(event) => setAgencySkills(event.target.value)} /></label></div></details></div>
               <div className="step-actions"><Button className="secondary" type="button" onClick={() => setCurrentStep(1)}>← Back</Button><Button className="primary" type="button" onClick={() => setCurrentStep(3)}>Confirm profile →</Button></div>
             </>
@@ -402,7 +434,7 @@ export default function Home() {
 
           {currentStep === 3 && selectedAgency && (
             <>
-              <div className="step-heading"><div><span className="eyebrow">Step 3 of 5</span><h2 id="step-3-title">Choose provider and model</h2><p>The default models are always available. Surplus models appear when returned by the configured server endpoint.</p></div></div>
+              <div className="step-heading"><div><span className="eyebrow">Step 3 of 5</span><h2 tabIndex={-1} id="step-3-title">Choose provider and model</h2><p>The default models are always available. Surplus models appear when returned by the configured server endpoint.</p></div></div>
               <fieldset className="model-picker"><legend>Provider and model</legend>{availableModels.map((model) => <label key={model.id} className={selectedModel === model.id ? 'model-option selected t-choice' : 'model-option t-choice'}><input type="radio" name="model" value={model.id} checked={selectedModel === model.id} onChange={() => setSelectedModel(model.id)} /><span><strong>{model.label}</strong><small>{model.provider === 'surplus' ? `Surplus · ${model.id}` : `Default provider · ${model.id}`}</small></span></label>)}</fieldset>
               {!modelsLoaded && <p className="helper" role="status">Checking for Surplus models…</p>}
               {modelsLoaded && !availableModels.some((model) => model.provider === 'surplus') && <p className="helper">No Surplus models are configured. You can continue with a default model.</p>}
@@ -412,7 +444,7 @@ export default function Home() {
 
           {currentStep === 4 && selectedAgency && (
             <>
-              <div className="step-heading"><div><span className="eyebrow">Step 4 of 5</span><h2 id="step-4-title">Add capabilities</h2><p>Only capabilities with a server-owned installer and post-install verification are shown. You can also deploy without extras.</p></div><strong className="roster-count">{selectedCapabilities.length} selected</strong></div>
+              <div className="step-heading"><div><span className="eyebrow">Step 4 of 5</span><h2 tabIndex={-1} id="step-4-title">Add capabilities</h2><p>Only capabilities with a server-owned installer and post-install verification are shown. You can also deploy without extras.</p></div><strong className="roster-count">{selectedCapabilities.length} selected</strong></div>
               <div className="capability-list">{INSTALLABLE_HERMES_CAPABILITIES.map((capability) => { const capabilityId = `${capability.kind}:${capability.slug}`; return <label key={capabilityId} className={selectedCapabilities.includes(capabilityId) ? 'capability-row selected t-choice' : 'capability-row t-choice'}><input type="checkbox" checked={selectedCapabilities.includes(capabilityId)} onChange={() => toggleCapability(capability)} /><span className="capability-kind">{capability.kind}</span><span><strong>{capability.name}</strong><small>{capability.description}</small></span></label> })}</div>
               <p className="helper">Selection does not prove installation. Installation is verified only after deployment.</p>
               <div className="step-actions"><Button className="secondary" type="button" onClick={() => setCurrentStep(3)}>← Back</Button><Button className="primary" type="button" onClick={() => setCurrentStep(5)}>Review setup →</Button></div>
@@ -421,12 +453,12 @@ export default function Home() {
 
           {currentStep === 5 && selectedAgency && (
             <>
-              <div className="step-heading"><div><span className="eyebrow">Step 5 of 5</span><h2 id="step-5-title">Review and deploy</h2><p>Check the exact specialist, profile, model, and capabilities that will be sent to the launch service.</p></div></div>
-              <dl className="review-list"><div><dt>Agent</dt><dd><strong>{selectedAgency.name}</strong><span>{selectedAgency.division} · {selectedAgency.slug}</span></dd><Button type="button" onClick={() => setCurrentStep(1)}>Edit</Button></div><div><dt>Profile</dt><dd><strong>Prepared profile confirmed</strong><span>soul.md · user.md · agents.md</span></dd><Button type="button" onClick={() => setCurrentStep(2)}>Edit</Button></div><div><dt>Provider & model</dt><dd><strong>{selectedModelChoice.provider === 'surplus' ? 'Surplus' : 'Default'}</strong><span>{selectedModelChoice.label} · {selectedModelChoice.id}</span></dd><Button type="button" onClick={() => setCurrentStep(3)}>Edit</Button></div><div><dt>Capabilities</dt><dd><strong>{selectedCapabilityDetails.length ? `${selectedCapabilityDetails.length} selected` : 'No extras selected'}</strong><span>{selectedCapabilityDetails.length ? selectedCapabilityDetails.map((item) => `${item.kind}: ${item.name}`).join(' · ') : 'Base workspace only'}</span></dd><Button type="button" onClick={() => setCurrentStep(4)}>Edit</Button></div></dl>
+              <div className="step-heading"><div><span className="eyebrow">Step 5 of 5</span><h2 tabIndex={-1} id="step-5-title">Review and deploy</h2><p>Check the exact specialist, profile, model, and capabilities that will be sent to the launch service.</p></div></div>
+              <dl className="review-list"><div><dt>Agent</dt><dd><strong>{selectedAgency.name}</strong><span>{selectedAgency.division} · {selectedAgency.slug}</span></dd><Button type="button" onClick={() => setCurrentStep(1)}>Edit</Button></div><div><dt>Profile</dt><dd><strong>Prepared profile confirmed</strong><span>soul.md · user.md · agents.md</span></dd><Button type="button" onClick={() => setCurrentStep(2)}>Edit</Button></div><div><dt>Provider & model</dt><dd><strong>{selectedModelChoice.provider === 'surplus' ? 'Surplus' : 'Default'}</strong><span>{selectedModelChoice.label} · {selectedModelChoice.id}</span></dd><Button type="button" onClick={() => setCurrentStep(3)}>Edit</Button></div><div><dt>Capabilities</dt><dd><strong>{selectedCapabilityDetails.length ? `${selectedCapabilityDetails.length} selected` : 'No extras selected'}</strong><span>{selectedCapabilityDetails.length ? selectedCapabilityDetails.map((item) => `${item.kind}: ${item.name}`).join(' · ') : 'Base workspace only'}</span></dd><Button type="button" onClick={() => setCurrentStep(4)}>Edit</Button></div><div><dt>Resources</dt><dd><strong>{resourceConfig.cpu} vCPU · {resourceConfig.memory} GB memory</strong><span>{resourceConfig.disk} GB workspace disk</span><select aria-label="Instance size" disabled={Boolean(launchResources)} value={`${resourceConfig.cpu}/${resourceConfig.memory}`} onChange={(event) => { const [cpu, memory] = event.target.value.split('/').map(Number); setResourceConfig((current) => ({ ...current, cpu, memory })) }}><option value="2/4">Standard · 2 vCPU / 4 GB</option><option value="4/8">Power · 4 vCPU / 8 GB</option><option value="8/16">Max · 8 vCPU / 16 GB</option></select>{launchResources && <span>Resources are locked for this workspace request.</span>}</dd><span /></div></dl>
               <div className="deploy-bar"><div><strong>Ready to create {selectedAgency.name}</strong><span>Deployment applies the profile and then verifies configuration readback.</span></div><Button className="primary deploy-button" type="button" disabled={launchState?.phase === 'launching'} onClick={() => launchAgent('agent37-hermes', selectedAgency.name)}>{launchState?.phase === 'launching' ? 'Deploying…' : 'Deploy specialist →'}</Button></div>
 
               {launchState && <section className={`launch-result ${launchState.phase} t-panel-slide`} data-open="true" aria-live="polite">{launchState.phase === 'launching' && <div className="deployment-loader t-matrix-shell" role="status"><span className="deployment-loader-mark t-matrix-loader" aria-hidden="true"><i /><i /><i /></span><div><span className="eyebrow">Commissioning workspace</span><h3>{selectedAgency.name}</h3><p className="t-thinking-copy">Creating the Agent37 workspace, applying the profile, and verifying every file. This usually takes a minute.</p><div className="deployment-loader-track indeterminate" aria-hidden="true"><Progress value={100} /></div></div></div>}<span className="eyebrow">Deployment status</span><h3>{launchState.instance?.name ?? selectedAgency.name}</h3><p>{launchState.message}</p>{launchState.receipt && <><div className="receipt-summary"><div><span>Configuration</span><strong className="mono">{launchState.receipt.config_id.slice(0, 12)}…</strong></div><div><span>Files</span><strong>{launchState.receipt.files.length} verified</strong></div><div><span>Model</span><strong>{launchState.runtime?.model.id ?? selectedModel}</strong></div></div><details><summary>Readback evidence</summary><ul>{launchState.receipt.files.map((file) => <li key={file.role}><span>{file.role}</span><span className="mono">{file.bytes} bytes · {file.sha256.slice(0, 8)}…</span></li>)}</ul></details><div className="proof-task"><h4>Safe readiness check</h4>{proofState.phase === 'succeeded' ? <div className="proof-success t-success-pop"><strong>✓ Test passed</strong><span>{proofState.output}</span></div> : <Button className="secondary" type="button" disabled={proofState.phase === 'running'} onClick={runProofTask}>{proofState.phase === 'running' ? 'Running check…' : proofState.phase === 'failed' ? 'Try check again' : 'Run safe check'}</Button>}{proofState.phase === 'failed' && <p role="alert">{proofState.message}</p>}</div><div className="graph-proof"><span className="eyebrow">Live sponsor proof / The Graph</span><h4>Analyze live Uniswap market data</h4><p>The server queries a live decentralized subgraph, then this deployed specialist turns the normalized evidence into a bounded research brief.</p>{graphState.phase === 'succeeded' && graphState.result ? <div className="graph-result t-panel-slide" data-open="true" role="status"><div className="receipt-summary"><div><span>Verdict</span><strong>{graphState.result.analysis.verdict}</strong></div><div><span>Indexed block</span><strong>{graphState.result.market.source.blockNumber.toLocaleString()}</strong></div><div><span>ETH reference</span><strong>${graphState.result.market.market.ethPriceUSD.toLocaleString()}</strong></div></div><p><strong>Assistant assessment:</strong> {graphState.result.analysis.summary}</p><ul>{graphState.result.analysis.evidence.map((item) => <li key={item}>{item}</li>)}</ul><details><summary>Live Graph evidence</summary><p className="mono">Deployment {graphState.result.market.source.deployment}<br />Block {graphState.result.market.source.blockNumber} · {graphState.result.market.source.blockHash.slice(0, 14)}…<br />Top pool {graphState.result.market.market.topPools[0]?.pair} · {graphState.result.market.metrics.topPoolVolumeSharePct}% of indexed volume<br />Observed {new Date(graphState.result.market.source.observedAt).toLocaleString()}</p></details></div> : <Button className="secondary" type="button" disabled={graphState.phase === 'running'} onClick={runGraphResearch}>{graphState.phase === 'running' ? 'Analyzing live data…' : graphState.phase === 'failed' ? 'Retry live analysis' : 'Analyze live subgraph'}</Button>}{graphState.phase === 'failed' && <p role="alert">{graphState.message}</p>}</div></>}
-                {launchState.instance && launchState.phase === 'applied' && <div className="instance-tools"><label><span>Instance size</span><select value={`${resourceConfig.cpu}/${resourceConfig.memory}`} onChange={(event) => { const [cpu, memory] = event.target.value.split('/').map(Number); setResourceConfig((current) => ({ ...current, cpu, memory })) }}><option value="2/4">Standard · 2 vCPU / 4 GB</option><option value="4/8">Power · 4 vCPU / 8 GB</option><option value="8/16">Max · 8 vCPU / 16 GB</option></select></label><div><span>Workspace</span><Button type="button" disabled={agentBusy} onClick={() => openAgentWorkspace(launchState.instance!.id)}>Open management →</Button></div><div><span>Lifecycle</span>{(['start', 'stop', 'restart'] as AgentAction[]).map((action) => <Button type="button" key={action} disabled={agentBusy} onClick={() => agentAction(action)}>{action}</Button>)}<Button className="danger-control" type="button" disabled={agentBusy} onClick={() => agentAction('delete')}>delete</Button></div></div>}
+                {launchState.instance && launchState.phase === 'applied' && <div className="instance-tools"><div><span>Instance size</span><strong>{(launchState.instance.resources ?? launchResources ?? resourceConfig).cpu} vCPU · {(launchState.instance.resources ?? launchResources ?? resourceConfig).memory} GB memory · {(launchState.instance.resources ?? launchResources ?? resourceConfig).disk} GB disk</strong></div><div><span>Workspace</span><Button type="button" disabled={agentBusy} onClick={() => openAgentWorkspace(launchState.instance!.id)}>Open management →</Button></div><div><span>Lifecycle</span>{(['start', 'stop', 'restart'] as AgentAction[]).map((action) => <Button type="button" key={action} disabled={agentBusy} onClick={() => agentAction(action)}>{action}</Button>)}<Button className="danger-control" type="button" disabled={agentBusy} onClick={() => agentAction('delete')}>delete</Button></div></div>}
                 {agentError && <p role="alert">{agentError}</p>}</section>}
               <div className="step-actions"><Button className="secondary" type="button" onClick={() => setCurrentStep(4)}>← Back</Button></div>
             </>

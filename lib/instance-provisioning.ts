@@ -59,7 +59,7 @@ export async function provisionConfiguredInstance(input: {
       },
       budget: { monthly_cap_micros: 5000000 },
     })
-    if (!instance || typeof instance !== 'object' || Array.isArray(instance)) throw new Agent37Error('AGENT37_ERROR', 502)
-    return { instance: instance as Record<string, unknown>, replayed: false }
+    if (!instance || typeof instance !== 'object' || Array.isArray(instance) || typeof instance.id !== 'string') throw new Agent37Error('AGENT37_INVALID_RESPONSE', 502)
+    return { instance: { ...instance, resources: instance.resources ?? input.resources }, replayed: false }
   })
 }

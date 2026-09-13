@@ -1,0 +1,6 @@
+
+/* Final accessibility and review-step adjustments */
+.skip-link{position:fixed;left:16px;top:10px;z-index:200;transform:translateY(-150%);padding:10px 14px;background:var(--ink);color:var(--paper);font:12px monospace;text-decoration:none}.skip-link:focus{transform:none}
+.review-list select{width:min(100%,340px);min-height:44px;margin-top:8px;padding:9px 12px}
+[tabindex="-1"]:focus{outline:2px solid var(--red);outline-offset:5px}
+@media(max-width:700px){.review-list>div{grid-template-columns:1fr}.review-list>div>button{justify-self:start}.review-list>div>span:last-child:empty{display:none}}

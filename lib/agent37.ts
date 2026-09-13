@@ -89,7 +89,14 @@ export async function requireOwnedInstance(id: string, scope: string) {
     throw new Agent37Error('INSTANCE_NOT_FOUND', 404)
   }
 }
-export function createInstance(body: Record<string, unknown>) { return upstream('/instances', { method: 'POST', body: JSON.stringify(body) }) }
+export async function createInstance(body: Record<string, unknown>) {
+  const payload = await upstream('/instances', { method: 'POST', body: JSON.stringify(body) })
+  const instance = payload && typeof payload === 'object' && !Array.isArray(payload) && 'instance' in payload
+    ? (payload as { instance?: unknown }).instance
+    : payload
+  if (!instance || typeof instance !== 'object' || Array.isArray(instance) || typeof (instance as Record<string, unknown>).id !== 'string') throw new Agent37Error('AGENT37_INVALID_RESPONSE', 502)
+  return instance as Record<string, unknown>
+}
 export function execInstance(id: string, command: string) { return upstream(`/instances/${encodeURIComponent(id)}/exec`, { method: 'POST', body: JSON.stringify({ command }) }) }
 export function actionInstance(id: string, action: string, body?: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: body ? JSON.stringify(body) : undefined }) }
 export function updateBudget(id: string, body: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/budget`, { method: 'PATCH', body: JSON.stringify(body) }) }
@@ -104,6 +111,10 @@ export function errorResponse(error: unknown) {
   const messages: Record<string, string> = {
     AGENT37_NOT_CONFIGURED: 'Instance provisioning is not configured yet.',
     PAYLOAD_TOO_LARGE: 'Request is too large.',
+    AGENT37_UNREACHABLE: 'Agent37 could not be reached. LegitMate will check whether a workspace was created before another request is sent.',
+    AGENT37_ERROR: 'Agent37 could not complete the workspace request. LegitMate will check for an existing workspace before retrying.',
+    AGENT37_INVALID_RESPONSE: 'Agent37 returned an invalid workspace response. Check My instances before retrying.',
+    AGENT_NOT_READY: 'The workspace was created, but Hermes did not become ready in time. Open My instances to inspect it before retrying.',
     AUTH_NOT_CONFIGURED: 'Secure server authentication is not configured.',
     AUTH_REQUIRED: 'Sign in before managing an instance.',
     INVALID_AUTH_TOKEN: 'Your session is invalid or expired.',
@@ -115,7 +126,8 @@ export function errorResponse(error: unknown) {
     RUNTIME_CONFIG_FAILED: 'The selected model configuration could not be written.',
     RUNTIME_CONFIG_VERIFICATION_FAILED: 'The selected model configuration could not be verified.',
   }
-  return Response.json({ ok: false, code: e.code, message: messages[e.code] ?? 'Agent service request failed.' }, { status: e.status })
+  const status = e.status === 502 ? 424 : e.status
+  return Response.json({ ok: false, code: e.code, message: messages[e.code] ?? 'Agent service request failed.' }, { status })
 }
 
 // Best-effort process-local coalescing; the client request ID also reconciles after a restart.
