@@ -15,7 +15,6 @@ import { ThemeToggle } from '../components/theme-provider'
 import { SoundToggle } from '../components/ui-sounds'
 import { EmbeddedWallet } from '../components/embedded-wallet'
 import { AGENCY_AGENTS, AGENCY_AGENT_COUNT, type AgencyAgent } from '../lib/agency-agents'
-import { INSTALLABLE_HERMES_CAPABILITIES, type HermesCapability } from '../lib/hermes-catalog'
 import { agentActionRequest, type AgentAction } from '../lib/agent-actions'
 import { deploymentConfettiBursts } from '../lib/deployment-confetti'
 
@@ -58,6 +57,8 @@ type LaunchState = {
 type ProofState = { phase: 'idle' | 'running' | 'succeeded' | 'failed'; key?: string; output?: string; executionId?: string; message?: string }
 type GraphState = { phase: 'idle' | 'running' | 'succeeded' | 'failed'; message?: string; result?: { market: { source: { blockNumber: number; blockHash: string; deployment: string; observedAt: string }; market: { ethPriceUSD: number; totalValueLockedUSD: number; topPools: Array<{ pair: string; volumeUSD: number }> }; metrics: { topPoolVolumeSharePct: number; volumeToTvlRatio: number } }; analysis: { verdict: string; summary: string; evidence: string[] } } }
 type ModelChoice = { id: string; label: string; provider: 'default' | 'surplus' }
+type CatalogCapability = { id: string; kind: 'skill' | 'plugin'; name: string; description: string; source: string; trust: string; installable: boolean; reason?: string; requiresEnv?: string[] }
+type CatalogResponse = { ok: boolean; items?: CatalogCapability[]; total?: number; page?: number; totalPages?: number; counts?: { skills: number; plugins: number }; message?: string }
 
 const defaultModels: ModelChoice[] = [
   { id: 'nous-default', label: 'Balanced — recommended', provider: 'default' },
@@ -93,6 +94,16 @@ export default function Home() {
   const [availableModels, setAvailableModels] = useState<ModelChoice[]>(defaultModels)
   const [modelsLoaded, setModelsLoaded] = useState(false)
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([])
+  const [catalogItems, setCatalogItems] = useState<CatalogCapability[]>([])
+  const [catalogQuery, setCatalogQuery] = useState('')
+  const [catalogKind, setCatalogKind] = useState<'all' | 'skill' | 'plugin'>('all')
+  const [catalogPage, setCatalogPage] = useState(1)
+  const [catalogTotalPages, setCatalogTotalPages] = useState(1)
+  const [catalogCounts, setCatalogCounts] = useState({ skills: 0, plugins: 0 })
+  const [catalogPhase, setCatalogPhase] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [catalogError, setCatalogError] = useState('')
+  const [catalogRetry, setCatalogRetry] = useState(0)
+  const [selectedCapabilityMetadata, setSelectedCapabilityMetadata] = useState<Record<string, CatalogCapability>>({})
   const [launchState, setLaunchState] = useState<LaunchState | null>(null)
   const [proofState, setProofState] = useState<ProofState>({ phase: 'idle' })
   const [graphState, setGraphState] = useState<GraphState>({ phase: 'idle' })
@@ -110,6 +121,27 @@ export default function Home() {
       stepPanel.current?.querySelector<HTMLElement>('h2')?.focus()
     }
   }, [currentStep])
+
+  useEffect(() => {
+    if (currentStep !== 4) return
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      setCatalogPhase('loading'); setCatalogError('')
+      const params = new URLSearchParams({ page: String(catalogPage), size: '24' })
+      if (catalogKind !== 'all') params.set('kind', catalogKind)
+      if (catalogQuery.trim()) params.set('q', catalogQuery.trim())
+      fetch(`/api/hermes/catalog?${params}`, { signal: controller.signal })
+        .then(async (response) => ({ response, body: await response.json() as CatalogResponse }))
+        .then(({ response, body }) => {
+          if (!response.ok || !body.ok || !body.items) throw new Error(body.message || 'Hermes catalog is unavailable.')
+          setCatalogItems(body.items)
+          setSelectedCapabilityMetadata((current) => ({ ...current, ...Object.fromEntries(body.items!.map((item) => [item.id, item])) }))
+          setCatalogTotalPages(body.totalPages ?? 1); setCatalogCounts(body.counts ?? { skills: 0, plugins: 0 }); setCatalogPhase('ready')
+        })
+        .catch((error) => { if (error instanceof DOMException && error.name === 'AbortError') return; setCatalogError(error instanceof Error ? error.message : 'Hermes catalog is unavailable.'); setCatalogPhase('error') })
+    }, 250)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [currentStep, catalogQuery, catalogKind, catalogPage, catalogRetry])
 
   useEffect(() => {
     fetch('/api/models')
@@ -186,8 +218,11 @@ export default function Home() {
     [normalizedAgentQuery],
   )
   const selectedCapabilityDetails = useMemo(
-    () => INSTALLABLE_HERMES_CAPABILITIES.filter((capability) => selectedCapabilities.includes(`${capability.kind}:${capability.slug}`)),
-    [selectedCapabilities],
+    () => {
+      const live = new Map(Object.entries(selectedCapabilityMetadata))
+      return selectedCapabilities.map((id) => live.get(id) ?? { id, kind: id.startsWith('plugin:') ? 'plugin' as const : 'skill' as const, name: id.slice(id.indexOf(':') + 1), description: 'Selected from the Hermes catalog.', source: 'Hermes', trust: 'catalog', installable: true })
+    },
+    [selectedCapabilities, selectedCapabilityMetadata],
   )
 
   const selectAgency = (agent: AgencyAgent) => {
@@ -202,10 +237,10 @@ export default function Home() {
     setGraphState({ phase: 'idle' })
   }
 
-  const toggleCapability = (capability: HermesCapability) => {
-    const id = `${capability.kind}:${capability.slug}`
+  const toggleCapability = (capability: CatalogCapability) => {
+    const id = capability.id
     setSelectedCapabilities((current) =>
-      current.includes(id) ? current.filter((capabilityId) => capabilityId !== id) : [...current, id],
+      current.includes(id) ? current.filter((capabilityId) => capabilityId !== id) : current.length < 16 ? [...current, id] : current,
     )
   }
 
@@ -445,10 +480,15 @@ export default function Home() {
 
           {currentStep === 4 && selectedAgency && (
             <>
-              <div className="step-heading"><div><span className="eyebrow">Step 4 of 5</span><h2 tabIndex={-1} id="step-4-title">Add capabilities</h2><p>Only capabilities with a server-owned installer and post-install verification are shown. You can also deploy without extras.</p></div><strong className="roster-count">{selectedCapabilities.length} selected</strong></div>
-              <div className="capability-list">{INSTALLABLE_HERMES_CAPABILITIES.map((capability) => { const capabilityId = `${capability.kind}:${capability.slug}`; return <label key={capabilityId} className={selectedCapabilities.includes(capabilityId) ? 'capability-row selected t-choice' : 'capability-row t-choice'}><input type="checkbox" checked={selectedCapabilities.includes(capabilityId)} onChange={() => toggleCapability(capability)} /><span className="capability-kind">{capability.kind}</span><span><strong>{capability.name}</strong><small>{capability.description}</small></span></label> })}</div>
-              <p className="helper">Selection does not prove installation. Installation is verified only after deployment.</p>
-              <div className="step-actions"><Button className="secondary" type="button" onClick={() => setCurrentStep(3)}>← Back</Button><Button className="primary" type="button" onClick={() => setCurrentStep(5)}>Review setup →</Button></div>
+              <div className="step-heading"><div><span className="eyebrow">Step 4 of 5</span><h2 tabIndex={-1} id="step-4-title">Add capabilities</h2><p>Browse the live Hermes Skills Hub and plugin catalog. LegitMate installs selected entries inside your workspace and verifies the result.</p></div><strong className="roster-count">{selectedCapabilities.length} / 16 selected</strong></div>
+              <div className="catalog-toolbar"><Input aria-label="Search Hermes capabilities" type="search" value={catalogQuery} onChange={(event) => { setCatalogQuery(event.target.value); setCatalogPage(1) }} placeholder="Search 100k+ Hermes skills and plugins" /><div role="group" aria-label="Capability type"><Button type="button" aria-pressed={catalogKind === 'all'} onClick={() => { setCatalogKind('all'); setCatalogPage(1) }}>All</Button><Button type="button" aria-pressed={catalogKind === 'skill'} onClick={() => { setCatalogKind('skill'); setCatalogPage(1) }}>Skills {catalogCounts.skills.toLocaleString()}</Button><Button type="button" aria-pressed={catalogKind === 'plugin'} onClick={() => { setCatalogKind('plugin'); setCatalogPage(1) }}>Plugins {catalogCounts.plugins.toLocaleString()}</Button></div></div>
+              {catalogPhase === 'loading' && <p className="helper" role="status">Loading the Hermes catalog…</p>}
+              {catalogPhase === 'error' && <div className="catalog-error" role="alert"><span>{catalogError}</span><Button type="button" onClick={() => setCatalogRetry((value) => value + 1)}>Try again</Button></div>}
+              {catalogPhase === 'ready' && <div className="capability-list">{catalogItems.map((capability) => { const selected = selectedCapabilities.includes(capability.id); const selectionLimit = selectedCapabilities.length >= 16 && !selected; const disabledReason = capability.reason ?? (selectionLimit ? 'Selection limit reached' : ''); return <label key={capability.id} title={disabledReason} className={selected ? 'capability-row selected t-choice' : 'capability-row t-choice'}><input type="checkbox" checked={selected} disabled={!capability.installable || selectionLimit} aria-describedby={disabledReason ? `capability-reason-${capability.id.replaceAll(/[^A-Za-z0-9_-]/g, '-')}` : undefined} onChange={() => toggleCapability(capability)} /><span className="capability-kind">{capability.kind}</span><span><strong>{capability.name}</strong><small>{capability.description || capability.source}</small>{disabledReason && <em id={`capability-reason-${capability.id.replaceAll(/[^A-Za-z0-9_-]/g, '-')}`}>{disabledReason}</em>}</span></label> })}</div>}
+              {catalogPhase === 'ready' && catalogItems.length === 0 && <div className="roster-empty" role="status"><strong>No matching capabilities</strong><span>Try another term or capability type.</span></div>}
+              {catalogTotalPages > 1 && <div className="catalog-pagination" aria-live="polite"><Button type="button" disabled={catalogPage <= 1} onClick={() => setCatalogPage((page) => page - 1)}>← Previous</Button><span>Page {catalogPage} of {catalogTotalPages}</span><Button type="button" disabled={catalogPage >= catalogTotalPages} onClick={() => setCatalogPage((page) => page + 1)}>Next →</Button></div>}
+              <p className="helper">Catalog choices are resolved again by the server. Installation is complete only after Agent37 exec and Hermes readback verification succeed.</p>
+              <div className="step-actions"><Button className="secondary" type="button" onClick={() => setCurrentStep(3)}>← Back</Button><Button className="primary" type="button" disabled={catalogPhase === 'loading' || catalogPhase === 'error'} onClick={() => setCurrentStep(5)}>Review setup →</Button></div>
             </>
           )}
 

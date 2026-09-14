@@ -1,16 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const agent37Mocks = vi.hoisted(() => ({ errorResponse: vi.fn() }))
+const agent37Mocks = vi.hoisted(() => ({ errorResponse: vi.fn(), requireOwnedInstance: vi.fn() }))
 const auth = vi.hoisted(() => ({ requirePrincipal: vi.fn() }))
 const parser = vi.hoisted(() => ({ parseAgentConfiguration: vi.fn() }))
 const provisioner = vi.hoisted(() => ({ provisionConfiguredInstance: vi.fn(), parseResourceShape: vi.fn() }))
 const applicator = vi.hoisted(() => ({ applyAgentConfiguration: vi.fn(), commitAppliedReceipt: vi.fn() }))
 const runtime = vi.hoisted(() => ({ applyRuntimeConfiguration: vi.fn() }))
 const models = vi.hoisted(() => ({ discoverModels: vi.fn() }))
+const capabilities = vi.hoisted(() => ({ resolveHermesCapabilities: vi.fn() }))
 
 vi.mock('../lib/agent37', async () => {
   const actual = await vi.importActual<typeof import('../lib/agent37')>('../lib/agent37')
-  return { ...actual, errorResponse: agent37Mocks.errorResponse }
+  return { ...actual, ...agent37Mocks, APPROVED_TEMPLATES: new Set(['agent37-hermes']) }
 })
 vi.mock('../lib/auth', () => auth)
 vi.mock('../lib/agent-configuration', async () => {
@@ -21,6 +22,7 @@ vi.mock('../lib/instance-provisioning', () => provisioner)
 vi.mock('../lib/apply-configuration', () => applicator)
 vi.mock('../lib/apply-runtime', () => runtime)
 vi.mock('../lib/model-discovery', () => models)
+vi.mock('../lib/hermes-live-catalog', () => capabilities)
 
 import { POST } from '../app/api/agents/launch/route'
 import { ConfigurationError } from '../lib/agent-configuration'
@@ -55,7 +57,9 @@ describe('configured launch route', () => {
     applicator.commitAppliedReceipt.mockResolvedValue(receipt)
     runtime.applyRuntimeConfiguration.mockResolvedValue({ model: { provider: 'default', id: 'nous-default', config_sha256: 'a'.repeat(64) }, capabilities: [] })
     models.discoverModels.mockResolvedValue({ models: [{ id: 'surplus/model-a', provider: 'surplus', label: 'model-a' }], surplus: 'live' })
+    capabilities.resolveHermesCapabilities.mockResolvedValue([])
     agent37Mocks.errorResponse.mockImplementation((error: { code?: string; status?: number }) => Response.json({ ok: false, code: error.code ?? 'AGENT37_ERROR' }, { status: error.status ?? 502 }))
+    agent37Mocks.requireOwnedInstance.mockResolvedValue({ id: 'ab12cd34ef', user: 'legitmate:owner' })
   })
   afterEach(() => vi.restoreAllMocks())
 
@@ -65,8 +69,9 @@ describe('configured launch route', () => {
     await expect(response.json()).resolves.toMatchObject({ ok: true, instance: { id: 'ab12cd34ef' }, configuration: receipt, replayed: false })
     expect(parser.parseAgentConfiguration).toHaveBeenCalledWith(expect.any(Object), 'owner')
     expect(provisioner.provisionConfiguredInstance).toHaveBeenCalledWith(expect.objectContaining({ scope: 'legitmate:owner', configuration }))
+    expect(agent37Mocks.requireOwnedInstance).toHaveBeenCalledWith('ab12cd34ef', 'legitmate:owner')
     expect(applicator.applyAgentConfiguration).toHaveBeenCalledWith('ab12cd34ef', configuration)
-    expect(runtime.applyRuntimeConfiguration).toHaveBeenCalledWith('ab12cd34ef', configuration)
+    expect(runtime.applyRuntimeConfiguration).toHaveBeenCalledWith('ab12cd34ef', configuration, [])
     expect(applicator.commitAppliedReceipt).toHaveBeenCalledWith('ab12cd34ef', receipt, expect.any(Object))
   })
 

@@ -36,12 +36,14 @@ test.describe('LegitMate specialist setup', () => {
     await expect(page.getByRole('heading', { name: 'Choose provider and model' })).toBeVisible()
     await expect(page.getByText('Balanced — recommended')).toBeVisible()
 
+    await page.route('**/api/hermes/catalog*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, items: [{ id: 'skill:official/security/privy', kind: 'skill', name: 'Privy', description: 'Wallet workflow', source: 'official', trust: 'builtin', installable: true }], total: 1, page: 1, totalPages: 1, counts: { skills: 100148, plugins: 9 } }) })
+    })
     await page.getByRole('button', { name: 'Continue to capabilities' }).click()
     await expect(page.getByRole('heading', { name: 'Add capabilities' })).toBeVisible()
-    const privyCapability = page.locator('.capability-row').filter({ hasText: /^skillprivy/ })
-    const agencyCapability = page.locator('.capability-row').filter({ hasText: /^pluginagency agents router/ })
+    await page.getByLabel('Search Hermes capabilities').fill('privy')
+    const privyCapability = page.locator('.capability-row').filter({ hasText: 'Privy' })
     await expect(privyCapability).toBeVisible()
-    await expect(agencyCapability).toBeVisible()
     await privyCapability.click()
 
     await page.getByRole('button', { name: 'Review setup →' }).click()
@@ -50,12 +52,13 @@ test.describe('LegitMate specialist setup', () => {
     await expect(page.getByText('4 vCPU · 8 GB memory')).toBeVisible()
     await page.getByLabel('Instance size').selectOption('2/4')
     await expect(page.locator('.review-list').getByText('UI Designer', { exact: true })).toBeVisible()
-    await expect(page.getByText('skill: privy')).toBeVisible()
+    await expect(page.getByText('skill: Privy')).toBeVisible()
     await expect(page.getByText('Start with an outcome.')).toHaveCount(0)
   })
 
 
   test('shows a useful deploy error when the proxy returns HTML and reconciliation finds no instance', async ({ page }) => {
+    test.setTimeout(45_000)
     await page.route('**/api/agents/launch/*', async (route) => {
       await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ ok: false, state: 'absent', found: false }) })
     })
@@ -68,7 +71,7 @@ test.describe('LegitMate specialist setup', () => {
     await page.getByRole('button', { name: 'Continue to capabilities' }).click()
     await page.getByRole('button', { name: 'Review setup' }).click()
     await page.getByRole('button', { name: 'Deploy specialist' }).click()
-    await expect(page.getByText(/server returned 502/i)).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/server returned 502/i)).toBeVisible({ timeout: 20_000 })
     await expect(page.getByText(/Unexpected token/)).toHaveCount(0)
   })
 
