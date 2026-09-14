@@ -98,6 +98,7 @@ export async function createInstance(body: Record<string, unknown>) {
   return instance as Record<string, unknown>
 }
 export function execInstance(id: string, command: string) { return upstream(`/instances/${encodeURIComponent(id)}/exec`, { method: 'POST', body: JSON.stringify({ command }) }) }
+export function deleteInstance(id: string) { return upstream(`/instances/${encodeURIComponent(id)}`, { method: 'DELETE' }) }
 export function actionInstance(id: string, action: string, body?: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: body ? JSON.stringify(body) : undefined }) }
 export function updateBudget(id: string, body: Record<string, unknown>) { return upstream(`/instances/${encodeURIComponent(id)}/budget`, { method: 'PATCH', body: JSON.stringify(body) }) }
 export function signedUrl(id: string, port: number, ttlSeconds = 300) { return upstream(`/instances/${encodeURIComponent(id)}/signed-url`, { method: 'POST', body: JSON.stringify({ port, ttl_seconds: ttlSeconds }) }) }

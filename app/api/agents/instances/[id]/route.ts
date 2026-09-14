@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { actionInstance, cleanId, errorResponse, requireOwnedInstance } from '../../../../../lib/agent37'
+import { Agent37Error, cleanId, deleteInstance, errorResponse, requireOwnedInstance } from '../../../../../lib/agent37'
 import { requirePrincipal } from '../../../../../lib/auth'
 import { instanceSummary } from '../../../../../lib/instance-summary'
 
@@ -21,6 +21,6 @@ export async function DELETE(request: NextRequest, context: Context) {
     if (!id) return Response.json({ ok: false, code: 'INVALID_INSTANCE_ID' }, { status: 400 })
     const { scope } = await requirePrincipal(request)
     await requireOwnedInstance(id, scope)
-    return Response.json({ ok: true, instance: await actionInstance(id, 'delete') })
+    return Response.json({ ok: true, instance: await deleteInstance(id) })
   } catch (e) { return errorResponse(e) }
 }
