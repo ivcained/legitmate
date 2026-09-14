@@ -1,0 +1,113 @@
+/* shadcn preset b2fms620zo with dark as LegitMate default */
+:root,[data-theme="dark"]{
+  color-scheme:dark;
+  --background:oklch(0.148 0.004 228.8);
+  --foreground:oklch(0.987 0.002 197.1);
+  --card:oklch(0.218 0.008 223.9);
+  --card-foreground:oklch(0.987 0.002 197.1);
+  --popover:oklch(0.218 0.008 223.9);
+  --popover-foreground:oklch(0.987 0.002 197.1);
+  --primary:oklch(0.925 0.005 214.3);
+  --primary-foreground:oklch(0.218 0.008 223.9);
+  --secondary:var(--muted-surface);
+  --secondary-foreground:oklch(0.987 0.002 197.1);
+  --lm-muted-text:oklch(0.78 0.012 214.4);
+  --muted-surface:oklch(0.275 0.011 216.9);
+  --accent:oklch(0.925 0.005 214.3);
+  --accent-foreground:oklch(0.218 0.008 223.9);
+  --destructive:oklch(0.704 0.191 22.216);
+  --border:oklch(1 0 0 / 10%);
+  --input:oklch(1 0 0 / 15%);
+  --ring:oklch(0.56 0.021 213.5);
+  --chart-1:oklch(0.811 0.111 293.571);
+  --chart-2:oklch(0.606 0.25 292.717);
+  --chart-3:oklch(0.541 0.281 293.009);
+  --chart-4:oklch(0.491 0.27 292.581);
+  --chart-5:oklch(0.432 0.232 292.759);
+  --radius:0.625rem;
+  --sidebar:oklch(0.218 0.008 223.9);
+  --sidebar-foreground:oklch(0.987 0.002 197.1);
+  --sidebar-primary:oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground:oklch(0.987 0.002 197.1);
+  --sidebar-accent:oklch(0.275 0.011 216.9);
+  --sidebar-accent-foreground:oklch(0.987 0.002 197.1);
+  --sidebar-border:oklch(1 0 0 / 10%);
+  --sidebar-ring:oklch(0.56 0.021 213.5);
+  --paper:var(--background);
+  --paper-deep:var(--secondary);
+  --sheet:var(--card);
+  --ink:var(--foreground);
+  --muted:var(--lm-muted-text);
+  --muted-foreground:var(--lm-muted-text);
+  --rule:var(--border);
+  --red:oklch(0.704 0.191 22.216);
+  --red-soft:oklch(0.76 0.15 28);
+  --lime:oklch(0.84 0.18 120);
+}
+[data-theme="light"]{
+  color-scheme:light;
+  --background:oklch(1 0 0);
+  --foreground:oklch(0.148 0.004 228.8);
+  --card:oklch(1 0 0);
+  --card-foreground:oklch(0.148 0.004 228.8);
+  --popover:oklch(1 0 0);
+  --popover-foreground:oklch(0.148 0.004 228.8);
+  --primary:oklch(0.218 0.008 223.9);
+  --primary-foreground:oklch(0.987 0.002 197.1);
+  --secondary:var(--muted-surface);
+  --secondary-foreground:oklch(0.218 0.008 223.9);
+  --lm-muted-text:oklch(0.48 0.018 213.5);
+  --muted-surface:oklch(0.963 0.002 197.1);
+  --accent:oklch(0.218 0.008 223.9);
+  --accent-foreground:oklch(0.987 0.002 197.1);
+  --destructive:oklch(0.577 0.245 27.325);
+  --border:oklch(0.925 0.005 214.3);
+  --input:oklch(0.925 0.005 214.3);
+  --ring:oklch(0.723 0.014 214.4);
+  --chart-1:oklch(0.811 0.111 293.571);
+  --chart-2:oklch(0.606 0.25 292.717);
+  --chart-3:oklch(0.541 0.281 293.009);
+  --chart-4:oklch(0.491 0.27 292.581);
+  --chart-5:oklch(0.432 0.232 292.759);
+  --sidebar:oklch(0.987 0.002 197.1);
+  --sidebar-foreground:oklch(0.148 0.004 228.8);
+  --sidebar-primary:oklch(0.218 0.008 223.9);
+  --sidebar-primary-foreground:oklch(0.987 0.002 197.1);
+  --sidebar-accent:oklch(0.963 0.002 197.1);
+  --sidebar-accent-foreground:oklch(0.218 0.008 223.9);
+  --sidebar-border:oklch(0.925 0.005 214.3);
+  --sidebar-ring:oklch(0.723 0.014 214.4);
+  --paper:var(--background);
+  --paper-deep:var(--secondary);
+  --sheet:var(--card);
+  --ink:var(--foreground);
+  --muted:var(--lm-muted-text);
+  --muted-foreground:var(--lm-muted-text);
+  --rule:var(--border);
+  --red:var(--destructive);
+  --red-soft:oklch(0.65 0.2 27.325);
+  --lime:oklch(0.606 0.25 292.717);
+}
+html,body{transition:background-color .2s ease,color .2s ease}
+body{background-color:var(--paper);background-image:linear-gradient(color-mix(in srgb,var(--ink) 4%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--ink) 3%,transparent) 1px,transparent 1px)}
+.topbar{background:color-mix(in srgb,var(--paper) 94%,transparent)}
+.setup-steps{background:color-mix(in srgb,var(--paper) 96%,transparent)}
+.setup-panel{background:color-mix(in srgb,var(--sheet) 94%,transparent)}
+.brand-mark{background:var(--ink);color:var(--paper)}
+.top-link,.sound-toggle,.theme-toggle,.wallet-actions button{border-color:var(--ink);color:var(--ink)}
+.top-link:hover,.sound-toggle:hover,.theme-toggle:hover,.wallet-actions button:hover{background:var(--ink);color:var(--paper)}
+.theme-toggle{display:inline-flex;align-items:center;gap:8px;min-width:44px;min-height:44px;padding:9px 12px;border-radius:var(--radius);background:transparent;font:10px monospace;text-transform:uppercase;letter-spacing:.07em}
+.theme-toggle svg{width:16px;height:16px}
+.agent-search input,textarea,input,select{background:var(--paper);color:var(--ink)}
+.agency-card{background:var(--sheet);color:var(--ink)}
+.agency-card.selected,.model-option.selected,.capability-row.selected,.selection-summary{background:var(--ink);color:var(--paper)}
+.wallet-trigger{background:var(--sheet)}
+.wallet-menu-content{background:var(--sheet)}
+[data-theme="dark"] .agency-card em{border-top-color:oklch(1 0 0 / 18%);color:oklch(0.82 0.008 210)}
+[data-theme="dark"] .agency-card small{color:oklch(0.77 0.01 210)}
+[data-theme="dark"] .agency-card.selected em,[data-theme="dark"] .agency-card.selected small{color:oklch(0.86 0.008 210)}
+[data-theme="dark"] .step-heading p,[data-theme="dark"] .helper{color:var(--muted-foreground)}
+[data-theme="dark"] .agent-search input::placeholder{color:oklch(0.68 0.012 214.4)}
+[data-theme="dark"] .setup-panel,[data-theme="dark"] .instance-card,[data-theme="dark"] .instance-detail-card,[data-theme="dark"] .workspace-section,[data-theme="dark"] .instances-state,[data-theme="dark"] .profile-identity,[data-theme="dark"] .model-option,[data-theme="dark"] .capability-row,[data-theme="dark"] .review-list,[data-theme="dark"] .deploy-bar,[data-theme="dark"] .launch-result,[data-theme="dark"] .graph-result,[data-theme="dark"] .proof-task,[data-theme="dark"] .instance-tools{box-shadow:none}
+@media(max-width:700px){.topbar-actions{grid-template-columns:minmax(0,1fr) 44px 44px}.topbar-actions>.theme-toggle,.topbar-actions>.sound-toggle{width:44px;padding:0;justify-content:center}.topbar-actions>.wallet-panel,.topbar-actions>.wallet-menu{grid-column:1/-1}.theme-toggle span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+@media(prefers-reduced-motion:reduce){html,body{transition:none}}
