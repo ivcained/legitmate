@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { AGENCY_AGENTS } from './agency-agents'
-import { INSTALLABLE_HERMES_CAPABILITY_IDS } from './hermes-catalog'
+
+export const CATALOG_CAPABILITY_ID = /^(skill|plugin):[A-Za-z0-9][A-Za-z0-9._/@:-]{1,400}$/
 
 export const IDENTITY_DESTINATIONS = {
   soul: '/home/node/.hermes/SOUL.md',
@@ -13,7 +14,6 @@ export const RECEIPT_PATH = '/home/node/.agent37-gateway/workspace/.legitmate/re
 const AGENCY_SLUGS = new Set(AGENCY_AGENTS.map((agent) => agent.slug))
 const APPROVED_MODELS = new Set(['nous-default', 'nous-reasoning'])
 const SURPLUS_MODEL_ID = /^surplus\/[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$/
-const APPROVED_CAPABILITIES = INSTALLABLE_HERMES_CAPABILITY_IDS
 const PROFILE_KEYS = new Set(['soul', 'user', 'agents'])
 const PROFILE_LIMITS = { soul: 12 * 1024, user: 8 * 1024, agents: 16 * 1024 } as const
 
@@ -61,7 +61,7 @@ export function parseAgentConfiguration(value: unknown, ownerSubject: string): A
   if (typeof input.agency_agent_slug !== 'string' || !AGENCY_SLUGS.has(input.agency_agent_slug)) throw new ConfigurationError('AGENCY_NOT_APPROVED')
   if (typeof input.model !== 'string' || (!APPROVED_MODELS.has(input.model) && !SURPLUS_MODEL_ID.test(input.model))) throw new ConfigurationError('MODEL_NOT_APPROVED')
   if (!Array.isArray(input.capabilities) || input.capabilities.length > 16) throw new ConfigurationError('TOO_MANY_CAPABILITIES')
-  if (input.capabilities.some((item) => typeof item !== 'string' || !APPROVED_CAPABILITIES.has(item))) throw new ConfigurationError('CAPABILITY_NOT_APPROVED')
+  if (input.capabilities.some((item) => typeof item !== 'string' || !CATALOG_CAPABILITY_ID.test(item))) throw new ConfigurationError('CAPABILITY_NOT_APPROVED')
   const capabilityIds = [...new Set(input.capabilities as string[])].sort()
   if (capabilityIds.length !== input.capabilities.length) throw new ConfigurationError('DUPLICATE_CAPABILITY')
 

@@ -34,12 +34,13 @@ describe('agent configuration validation', () => {
     [{ ...valid, model: 'arbitrary/model' }, 'MODEL_NOT_APPROVED'],
     [{ ...valid, model: 'surplus-capacity' }, 'MODEL_NOT_APPROVED'],
     [{ ...valid, capabilities: ['https://evil.invalid/plugin'] }, 'CAPABILITY_NOT_APPROVED'],
-    [{ ...valid, capabilities: ['skill:ab-testing'] }, 'CAPABILITY_NOT_APPROVED'],
+    [{ ...valid, capabilities: ['skill:ab-testing'] }, undefined],
     [{ ...valid, capabilities: Array.from({ length: 17 }, (_, i) => `skill:fake-${i}`) }, 'TOO_MANY_CAPABILITIES'],
     [{ ...valid, profile: { ...valid.profile, soul: 'bad\0text' } }, 'INVALID_PROFILE_TEXT'],
     [{ ...valid, profile: { ...valid.profile, extra: '../secret' } }, 'INVALID_PROFILE'],
   ] as const)('rejects invalid configuration %#', (input, code) => {
-    expect(() => parseAgentConfiguration(input, 'privy:user_123')).toThrow(code)
+    if (code) expect(() => parseAgentConfiguration(input, 'privy:user_123')).toThrowError(code)
+    else expect(() => parseAgentConfiguration(input, 'privy:user_123')).not.toThrow()
   })
 
   it('uses fixed server-owned identity destinations', () => {

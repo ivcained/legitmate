@@ -2,8 +2,9 @@ import { NextRequest } from 'next/server'
 import { applyAgentConfiguration, commitAppliedReceipt } from '../../../../lib/apply-configuration'
 import { applyRuntimeConfiguration } from '../../../../lib/apply-runtime'
 import { ConfigurationError, parseAgentConfiguration } from '../../../../lib/agent-configuration'
+import { resolveHermesCapabilities } from '../../../../lib/hermes-live-catalog'
 import { discoverModels } from '../../../../lib/model-discovery'
-import { Agent37Error, APPROVED_TEMPLATES, errorResponse, readJson } from '../../../../lib/agent37'
+import { Agent37Error, APPROVED_TEMPLATES, errorResponse, readJson, requireOwnedInstance } from '../../../../lib/agent37'
 import { requirePrincipal } from '../../../../lib/auth'
 import { parseResourceShape, provisionConfiguredInstance } from '../../../../lib/instance-provisioning'
 
@@ -19,13 +20,15 @@ export async function POST(request: NextRequest) {
       const catalog = await discoverModels()
       if (!catalog.models.some((model) => model.id === configuration.runtime.model && model.provider === 'surplus')) throw new Agent37Error('MODEL_NOT_APPROVED', 400)
     }
+    const resolvedCapabilities = await resolveHermesCapabilities(configuration.runtime.capability_ids)
     const resources = parseResourceShape(body.resources)
     const provisioned = await provisionConfiguredInstance({ scope: principal.scope, template, name: body.name, resources, configuration })
     const rawId = provisioned.instance.id
     if (typeof rawId !== 'string') throw new Agent37Error('AGENT37_ERROR', 502)
+    await requireOwnedInstance(rawId, principal.scope)
     try {
       const prepared = await applyAgentConfiguration(rawId, configuration)
-      const runtime = await applyRuntimeConfiguration(rawId, configuration)
+      const runtime = await applyRuntimeConfiguration(rawId, configuration, resolvedCapabilities)
       const receipt = await commitAppliedReceipt(rawId, prepared, runtime)
       return Response.json({ ok: true, instance: provisioned.instance, configuration: receipt, runtime, replayed: provisioned.replayed }, { status: provisioned.replayed ? 200 : 201 })
     } catch (error) {
