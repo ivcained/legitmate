@@ -1,5 +1,13 @@
 # Findings and evidence
 
+## 2026-09-15 — transitions.dev research
+- The current CLI installs 32 free recipes, superseding the repository README’s older 12-transition table for implementation scope.
+- Motion should communicate feedback, continuity, and hierarchy—not decorate every interaction.
+- P0 needs are layout stability, truthful async state, and stable destructive-action boundaries; earlier user corrections repeatedly concerned overflow, alignment, nested frames, and deployment uncertainty.
+- Every free recipe is installed and assigned, but recipes requiring absent data remain dormant until genuine avatars, media, voice, upload progress, or favorites exist.
+- Reduced motion must preserve text, focus, icons, status, and outcomes while removing shake, bounce, stagger, scale, and large travel.
+- A whole-panel wizard entrance caused a Playwright actionability regression. Local state-boundary motion is safer than animating the entire task surface.
+
 ## Current verified state
 - Correct repository: `/root/legitmate`, remote `https://github.com/ivcained/legitmate.git`.
 - Latest recorded synchronized commit before this plan: `1628851 feat: add model and Hermes capability selection`.

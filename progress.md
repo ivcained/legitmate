@@ -1,4 +1,10 @@
-# Progress log
+## 2026-09-15 — transitions.dev motion integration
+- Ran the requested Agency sequence: Trend Researcher, Feedback Synthesizer, then Sprint Prioritizer.
+- Confirmed the current transitions.dev CLI installs 32 free recipes, superseding the older 12-item README table.
+- Installed the full free recipe set under `transitions/` and added a 32-entry semantic registry with explicit active or honest dormant assignments.
+- Began Milestone 1 with shared motion tokens, reduced-motion overrides, and real commissioning/catalog/deployment adapters for text swap, panel reveal, checkbox, button loading, success, error, count, badge, and icon states.
+- A first commissioning Playwright run exposed an interaction-stability regression from animating the entire wizard panel; removed that broad animation and retained local state-boundary animation instead.
+- Verification after correction: 103 unit tests, TypeScript, ESLint, production build, desktop Playwright 4/4, instance Playwright 2/2, mobile Playwright 1/1.
 
 ## 2026-09-10 — planning restart
 - Restored project context and checked planning-file prerequisites.
