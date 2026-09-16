@@ -123,9 +123,25 @@ Workspace inventory, commissioning, lifecycle, files, chat, integrations, and de
 Privy uses an interactive browser login and does not expose a standards-based OAuth authorization-code server for third-party autonomous registration. See [auth.md](${SITE_ORIGIN}/auth.md).
 `
 
+export const OAUTH_AUTHORIZATION_SERVER_METADATA = {
+  issuer: 'https://auth.privy.io',
+  device_authorization_endpoint: 'https://auth.privy.io/api/oauth/v2/device_authorization',
+  token_endpoint: 'https://auth.privy.io/api/oauth/v2/token',
+  grant_types_supported: ['urn:ietf:params:oauth:grant-type:device_code', 'refresh_token'],
+  token_endpoint_auth_methods_supported: ['none'],
+  service_documentation: 'https://docs.privy.io/recipes/agent-integrations/agent-authorization',
+  agent_auth: {
+    register_uri: `${SITE_ORIGIN}/authorize`,
+    identity_types_supported: ['privy-user'],
+    credential_types_supported: ['oauth2-device-code'],
+    authorization_endpoint: `${SITE_ORIGIN}/authorize`,
+    grants_endpoint: 'https://auth.privy.io/api/oauth/v2/grants',
+  },
+} as const
+
 export const PROTECTED_RESOURCE_METADATA = {
   resource: `${SITE_ORIGIN}/api`,
-  authorization_servers: ['https://privy.io'],
+  authorization_servers: ['https://mate.legitclub.com'],
   bearer_methods_supported: ['header'],
   scopes_supported: [],
   resource_documentation: `${SITE_ORIGIN}/auth.md`,
@@ -133,19 +149,43 @@ export const PROTECTED_RESOURCE_METADATA = {
 
 export const AUTH_MARKDOWN = `# LegitMate auth.md
 
-LegitMate uses Privy access tokens for authenticated, owner-scoped API operations.
+LegitMate uses Privy for user authentication. Agents use public discovery endpoints without credentials. Consequential operations require a valid Privy access token from interactive browser sign-in or the OAuth 2.0 Device Authorization Grant.
 
-## Agent audience
+## Public discovery (no auth required)
 
-Agents may use public discovery APIs without authentication. Creating or mutating a workspace requires a user-authorized Privy session.
+- \`GET /\` — homepage
+- \`GET /.well-known/api-catalog\` — RFC 9727 API catalog
+- \`GET /openapi.json\` — OpenAPI 3.1 document
+- \`GET /docs/api\` — API documentation
+- \`GET /.well-known/agent-skills/index.json\` — Agent Skills index
+- \`GET /.well-known/ai-catalog.json\` — ARD manifest
+- \`GET /.well-known/mcp/server-card.json\` — MCP server card
+- \`GET /api/hermes/catalog\` — public Hermes catalog
+- \`GET /api/health\` — service health
+- \`POST /mcp\` — read-only MCP discovery tools
 
-## Registration and token acquisition
+## Authenticated endpoints
 
-LegitMate does not offer autonomous client registration or a public OAuth authorization-code/token endpoint. Privy authentication is interactive: direct the user to ${SITE_ORIGIN}/, let the user complete sign-in, and use the resulting Privy access token only with that user's approval.
+All \`/api/agents/*\` routes require a Privy access token in \`Authorization: Bearer <token>\`. Authorization is owner-scoped.
 
-## Credential use
+## Interactive sign-in
 
-Send the access token as \`Authorization: Bearer <token>\`. Tokens are verified server-side and mapped to an owner scope. Never request or transmit a password, wallet private key, app secret, or verification key.
+Direct users to \`https://mate.legitclub.com/\` to complete Privy browser authentication.
+
+## Agent / headless authentication
+
+LegitMate supports the [Privy OAuth 2.0 Device Authorization Grant](https://docs.privy.io/recipes/agent-integrations/agent-authorization) for agents running without a persistent browser session.
+
+**Prerequisite**: Enable "CLI and agent access" in Privy Dashboard under Authentication → Advanced. Set Verification URI to \`https://mate.legitclub.com/authorize\`.
+
+**Agent flow**:
+1. \`POST https://auth.privy.io/api/oauth/v2/device_authorization\` with header \`privy-app-id: <app-id>\` → receive \`device_code\`, \`user_code\`, \`verification_uri_complete\`, \`interval\`
+2. Display \`verification_uri_complete\` to the user; they approve via browser.
+3. Poll \`POST https://auth.privy.io/api/oauth/v2/token\` with \`grant_type: device_code\` and the \`device_code\`. Continue until an \`access_token\` is returned.
+4. Store the \`refresh_token\` securely. Exchange \`access_token\` for a wallet signing key via \`POST https://auth.privy.io/api/oauth/v2/wallets/authenticate\` (HPKE-encrypted response).
+5. Submit wallet RPC with the \`privy-authorization-signature\` header from the signing key.
+
+**Status**: Device authorization requires one-time dashboard configuration before use.
 
 Protected resource metadata: ${SITE_ORIGIN}/.well-known/oauth-protected-resource
 `

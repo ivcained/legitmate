@@ -5,6 +5,7 @@ import {
   API_CATALOG,
   ARD_CATALOG,
   MCP_SERVER_CARD,
+  OAUTH_AUTHORIZATION_SERVER_METADATA,
   OPENAPI_DOCUMENT,
   PROTECTED_RESOURCE_METADATA,
   ROBOTS_TEXT,
@@ -32,10 +33,17 @@ describe('agent discovery metadata', () => {
     expect(OPENAPI_DOCUMENT.components.securitySchemes.PrivyBearer).toBeTruthy()
   })
 
-  it('publishes truthful protected-resource metadata without claiming a local OAuth issuer', () => {
+  it('publishes OAuth protected-resource and authorization-server metadata without claiming a local OAuth issuer', () => {
     expect(PROTECTED_RESOURCE_METADATA.resource).toBe('https://mate.legitclub.com/api')
-    expect(PROTECTED_RESOURCE_METADATA.authorization_servers).toEqual(['https://privy.io'])
+    expect(PROTECTED_RESOURCE_METADATA.authorization_servers).toEqual(['https://mate.legitclub.com'])
     expect(PROTECTED_RESOURCE_METADATA.bearer_methods_supported).toEqual(['header'])
+  })
+
+  it('publishes oauth-authorization-server metadata pointing at the real Privy issuer', () => {
+    expect(OAUTH_AUTHORIZATION_SERVER_METADATA.issuer).toBe('https://auth.privy.io')
+    expect(OAUTH_AUTHORIZATION_SERVER_METADATA.device_authorization_endpoint).toBe('https://auth.privy.io/api/oauth/v2/device_authorization')
+    expect(OAUTH_AUTHORIZATION_SERVER_METADATA.agent_auth).toBeDefined()
+    expect(OAUTH_AUTHORIZATION_SERVER_METADATA.agent_auth.register_uri).toBe('https://mate.legitclub.com/authorize')
   })
 
   it('publishes an MCP card bound to the real read-only MCP endpoint', () => {
