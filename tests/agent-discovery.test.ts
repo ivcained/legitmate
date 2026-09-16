@@ -13,6 +13,7 @@ import {
   discoveryHeaders,
   homepageMarkdown,
 } from '../lib/agent-discovery'
+import sitemap from '../app/sitemap'
 
 describe('agent discovery metadata', () => {
   it('publishes RFC 8288 discovery links and content negotiation headers', () => {
@@ -73,6 +74,12 @@ describe('agent discovery metadata', () => {
   it('declares content signals and the ARD manifest in robots.txt', () => {
     expect(ROBOTS_TEXT).toContain('Content-Signal: ai-train=no, search=yes, ai-input=yes')
     expect(ROBOTS_TEXT).toContain('Agentmap: https://mate.legitclub.com/.well-known/ai-catalog.json')
+  })
+
+  it('publishes sitemap entries referenced by robots.txt', () => {
+    const entries = sitemap()
+    expect(entries.map((entry) => entry.url)).toContain('https://mate.legitclub.com/')
+    expect(entries.map((entry) => entry.url)).toContain('https://mate.legitclub.com/docs/api')
   })
 
   it('returns concise markdown for agent requests', () => {
