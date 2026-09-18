@@ -4,7 +4,7 @@ import { productOffers } from '../lib/product-offers'
 
 describe('LegitClub product family', () => {
   it('publishes distinct branded offers with working internal targets', () => {
-    expect(productOffers.map((product) => product.name)).toEqual(['Agent Workspaces', 'Search Systems', 'Short-Form Studio', 'Deck Studio'])
+    expect(productOffers.map((product) => product.name)).toEqual(['Agent Workspaces', 'Search Systems', 'Short-Form Studio', 'Deck Studio', 'Data Operations'])
     expect(new Set(productOffers.map((product) => product.slug)).size).toBe(productOffers.length)
     expect(new Set(productOffers.map((product) => product.href)).size).toBe(productOffers.length)
     for (const product of productOffers) {
@@ -17,5 +17,6 @@ describe('LegitClub product family', () => {
     const urls = new Set(sitemap().map((entry) => entry.url))
     expect(urls.has('https://mate.legitclub.com/products')).toBe(true)
     expect(urls.has('https://mate.legitclub.com/presentation-design')).toBe(true)
+    expect(urls.has('https://mate.legitclub.com/web-scraping-services')).toBe(true)
   })
 })
