@@ -403,7 +403,7 @@ export default function Home() {
       <a className="skip-link" href="#main-content">Skip to setup</a>
       <header className="topbar">
         <Link className="brand" href="/"><span className="brand-mark">LM</span> LegitClub</Link>
-        <div className="topbar-actions"><Link className="top-link" href="/short-form-video">Short-form video</Link><Link className="top-link" href="/seo-services">SEO services</Link><Link className="top-link" href="/instances">My instances</Link><ThemeToggle /><SoundToggle /><EmbeddedWallet /></div>
+        <div className="topbar-actions"><Link className="top-link" href="/products">Products</Link><Link className="top-link" href="/short-form-video">Short-form video</Link><Link className="top-link" href="/seo-services">SEO services</Link><Link className="top-link" href="/instances">My instances</Link><ThemeToggle /><SoundToggle /><EmbeddedWallet /></div>
       </header>
 
       <div id="main-content" className="main setup-main">

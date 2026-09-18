@@ -1,0 +1,6 @@
+export const productOffers = [
+  { slug: 'agent-workspaces', name: 'Agent Workspaces', label: 'OPERATE', href: '/#main-content', description: 'Commission a specialist with an approved model, capabilities, owned workspace, and verified configuration.', audience: 'Teams that need an AI operator, not another chat window.', accent: 'lime' },
+  { slug: 'search-systems', name: 'Search Systems', label: 'DISCOVER', href: '/seo-services', description: 'Technical SEO, content, authority, international search, and AI visibility shaped into one measurable growth system.', audience: 'Companies building durable organic and AI-search demand.', accent: 'coral' },
+  { slug: 'short-form-studio', name: 'Short-Form Studio', label: 'PUBLISH', href: '/short-form-video', description: 'Turn long-form footage and campaign ideas into reviewed, platform-ready vertical video on a monthly rhythm.', audience: 'Brands, founders, podcasters, and content teams.', accent: 'yellow' },
+  { slug: 'deck-studio', name: 'Deck Studio', label: 'PRESENT', href: '/presentation-design', description: 'Convert briefs, documents, data, and rough slides into branded, editable presentations built for the room.', audience: 'Founders, sales teams, executives, educators, and agencies.', accent: 'blue' },
+] as const
