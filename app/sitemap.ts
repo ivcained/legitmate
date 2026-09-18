@@ -6,5 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: 'https://mate.legitclub.com/instances', changeFrequency: 'weekly', priority: 0.8 },
     { url: 'https://mate.legitclub.com/docs/api', changeFrequency: 'monthly', priority: 0.7 },
     { url: 'https://mate.legitclub.com/auth.md', changeFrequency: 'monthly', priority: 0.5 },
+    { url: 'https://mate.legitclub.com/seo-services', changeFrequency: 'weekly', priority: 0.9 },
+    ...['technical-seo', 'keyword-research', 'rank-tracking', 'competitor-analysis', 'backlink-analysis', 'seo-audits', 'ai-seo', 'local-seo', 'international-seo', 'content-seo', 'ecommerce-seo', 'saas-seo'].map((slug) => ({ url: `https://mate.legitclub.com/seo-services/${slug}`, changeFrequency: 'monthly' as const, priority: 0.8 })),
   ]
 }

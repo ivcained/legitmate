@@ -402,15 +402,15 @@ export default function Home() {
     <main className="shell">
       <a className="skip-link" href="#main-content">Skip to setup</a>
       <header className="topbar">
-        <Link className="brand" href="/"><span className="brand-mark">LM</span> LegitMate</Link>
-        <div className="topbar-actions"><Link className="top-link" href="/instances">My instances</Link><ThemeToggle /><SoundToggle /><EmbeddedWallet /></div>
+        <Link className="brand" href="/"><span className="brand-mark">LM</span> LegitClub</Link>
+        <div className="topbar-actions"><Link className="top-link" href="/seo-services">SEO services</Link><Link className="top-link" href="/instances">My instances</Link><ThemeToggle /><SoundToggle /><EmbeddedWallet /></div>
       </header>
 
       <div id="main-content" className="main setup-main">
         <section className="setup-hero t-hero-reveal">
           <div className="eyebrow">Specialist deployment</div>
           <h1>Choose an agent.<br /><em>Deploy with confidence.</em></h1>
-          <p>Pick a specialist, confirm its profile, choose a model and capabilities, then review the exact setup before deployment.</p>
+          <p>Pick a specialist, confirm its profile, choose a model and capabilities, then review the exact setup before deployment. Need search growth instead? <Link href="/seo-services">Explore our global SEO services →</Link></p>
           <div className="hero-signal"><span>279 specialists</span><i aria-hidden="true" /><span>verified setup</span><i aria-hidden="true" /><span>owned workspace</span></div>
         </section>
 
