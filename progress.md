@@ -10,3 +10,4 @@
 - Fixed the VPS deployment script to verify `.next/BUILD_ID`, preserve the running service during build, and fail promptly on a bad start. Deployment `35374312419` passed.
 - Release gates reached 123 passing Vitest tests, clean ESLint, clean TypeScript, and successful Next.js production builds.
 - Data Operations commit `cbce5e6` deployed successfully via run `35384230754`.
+- Deployment run `35370804031` failed because the old deploy script restarted the service before the `.next` build became available. Commit `e62b3e0` fixed the sequence; replacement runs `35374312419`, `35378316377`, `35384230754`, and `35385817579` passed. Production is active and all five public product routes return HTTP 200.
