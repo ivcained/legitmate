@@ -19,6 +19,7 @@ describe('SEO service pages', () => {
   it('publishes every service page in the sitemap', () => {
     const urls = new Set(sitemap().map((entry) => entry.url))
     expect(urls.has('https://mate.legitclub.com/seo-services')).toBe(true)
+    expect(urls.has('https://mate.legitclub.com/short-form-video')).toBe(true)
     for (const service of seoServices) expect(urls.has(`https://mate.legitclub.com/seo-services/${service.slug}`)).toBe(true)
   })
 })
