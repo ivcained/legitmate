@@ -11,3 +11,5 @@
 - Release gates reached 123 passing Vitest tests, clean ESLint, clean TypeScript, and successful Next.js production builds.
 - Data Operations commit `cbce5e6` deployed successfully via run `35384230754`.
 - Deployment run `35370804031` failed because the old deploy script restarted the service before the `.next` build became available. Commit `e62b3e0` fixed the sequence; replacement runs `35374312419`, `35378316377`, `35384230754`, and `35385817579` passed. Production is active and all five public product routes return HTTP 200.
+- Reconciled the OpenShorts audit: the short-form offer remains limited to managed use of MIT-covered core capabilities; restricted `/cloud/` billing/auth/hosting code is excluded without a separate commercial agreement. Added skip navigation and minimum navigation target size to the live short-form route.
+- Deployment `35387265592` failed because production `NODE_ENV` caused `npm ci` to omit Vitest before the test gate. The deploy script now installs dev dependencies for verification, builds, then replaces them with production-only dependencies before restarting the service.

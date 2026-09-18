@@ -28,12 +28,15 @@ if [[ "$actual_sha" != "$EXPECTED_SHA" ]]; then
 fi
 
 rm -rf node_modules .next
-npm ci
-node -e "require.resolve('next/package.json')"
+NODE_ENV=development npm ci --include=dev
+node -e "require.resolve('next/package.json'); require.resolve('vitest/package.json')"
 npm run lint
 npm run typecheck
 npm test -- --run
 npm run build
+rm -rf node_modules
+NODE_ENV=production npm ci --omit=dev
+node -e "require.resolve('next/package.json')"
 test -f .next/BUILD_ID
 systemctl stop legitmate.service
 systemctl start legitmate.service
