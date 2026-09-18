@@ -1,65 +1,69 @@
-# Transitions.dev motion integration
+# LegitClub Product Service Expansion
 
 ## Goal
-Integrate every free recipe installed by `npx transitions-dev add --free` as an accessible, semantically assigned product-motion primitive. Motion must clarify state without changing backend truth, delaying actions, or destabilizing responsive layouts.
 
-## Research complete
-- Agency Trend Researcher mapped the 2025–2026 motion landscape and transitions.dev recipes to LegitMate surfaces.
-- Agency Feedback Synthesizer prioritized layout stability, truthful async state, destructive-action safety, catalog speed, consistent motion language, and independent sound/motion preferences.
-- Agency Sprint Prioritizer produced the milestone sequence below.
+Ship a coherent, indexable LegitClub product family while keeping product claims, data handling, external integrations, and deployment state truthful.
 
-## Milestones
+## Current phase
 
-### M1 — Motion foundation and P0 feedback (current)
-- Preserve all free upstream recipes under `transitions/`.
-- Add a registry proving that each free recipe is assigned to a product surface or explicitly conditional.
-- Add shared duration/easing/distance tokens and reduced-motion policy.
-- Integrate text state swap, panel reveal, icon swap, success check, and one-shot error shake into real commissioning/deployment/catalog states.
-- Gate: fixed control geometry, server-driven status only, no looping outcomes, focus and ARIA preserved, reduced-motion disables spatial effects, all tests/build pass.
+Phase 4 — release verification.
 
-### M2 — Stable overlays and menus
-- Apply menu-dropdown to accessible controlled menus.
-- Apply modal transition to destructive instance deletion and other real confirmation boundaries.
-- Gate: focus trap/restoration, Escape behavior, single submit, truthful failure retention, no layout shift.
+## Completed products
 
-### M3 — Catalog counts and attention states
-- Apply number/count transitions and notification badges to real counts only.
-- Gate: no stale results, toolbar width stable, selection limit truthful, no per-row entrance storm.
+- [x] Agent Workspaces — owned Agency specialist commissioning and management.
+- [x] Search Systems — SEO strategy, technical SEO, keyword research, monitoring, content, authority, international/local/ecommerce/SaaS, and AI visibility.
+- [x] Short-Form Studio — managed long-form-to-shorts and AI-assisted short-video production offer.
+- [x] Deck Studio — managed presentation creation and private presentation-platform offer based on Presenton capabilities.
+- [x] Data Operations — authorized public web data extraction, monitoring, scheduled feeds, and website-to-Markdown/RAG offer based on Scrapling capabilities.
 
-### M4 — Spatial continuity
-- Apply bounded card resize to instance or receipt details.
-- Apply page-side-by-side progressively to instance list/detail navigation.
-- Gate: deep links/back work, scroll/focus preserved, reduced-motion fallback, no overflow or duplicate landmarks.
+## Phase 1 — source and market research
 
-### M5 — Conditional grouped identities
-- Apply avatar-group behavior only to real connected identities/integrations; otherwise keep the installed primitive dormant and tested.
-- Gate: no fabricated identities; hover, focus, and touch parity.
+- [x] Audit the source projects, licenses, workflows, deployment models, and API surfaces.
+- [x] Use Agency specialists for product, pricing, UX, SEO, security, privacy, and compliance review.
+- [x] Research current commercial search terminology without inventing search volume.
 
-### M6 — Full release gate
-- Registry covers every installed free recipe.
-- Normal/reduced-motion tests pass.
-- Accessibility, mobile, 200% zoom, light/dark themes, performance, lint, typecheck, unit, Playwright, and build pass.
-- Push, deploy, verify production.
+## Phase 2 — public offer implementation
 
-## First milestone acceptance gate
-1. Every animated state is caused by a user action or verified server state.
-2. Buttons and status containers retain stable dimensions.
-3. Success appears only after confirmed success; errors run once and stay readable.
-4. `prefers-reduced-motion` removes shake, scale, stagger, large travel, and celebration.
-5. Live regions and alerts communicate the same state without motion.
-6. No horizontal overflow at supported mobile/desktop widths or 200% zoom.
-7. Existing commissioning and instance Playwright suites remain green.
+- [x] Build `/products` as the branded product-family hub.
+- [x] Build substantive service routes with unique scope, deliverables, measures, limitations, and quote-based CTAs.
+- [x] Add responsive route-scoped visual systems without fake proof or customer claims.
+- [x] Add page metadata, self-canonicals, Service schema, internal links, and sitemap entries.
 
-## Assumptions
-- “Integrate all free transitions” means install the complete free CLI catalog and assign every recipe deliberately; it does not mean showing every effect on every screen.
-- The CLI currently installs 32 free recipes, superseding the repository README’s older 12-item table.
-- Existing server contracts, ownership checks, receipts, sound preference, and verified-success confetti remain unchanged.
-- CSS-first recipes are preferred; add a runtime only where an upstream recipe genuinely requires it.
-- Progressive enhancement is acceptable for route continuity.
+## Phase 3 — technical SEO and trust controls
 
-## Open questions resolved by conservative defaults
-- Grouped avatars: conditional on real identity data; never fabricate users.
-- Mobile wallet navigation: retain current behavior until M2 validates an accessible menu/sheet replacement.
-- Page continuity: start with `/instances` → `/instances/[id]`, not authentication/error routes.
-- Component tests: prefer existing Playwright/Vitest coverage before adding another test framework.
-- Performance gate: reject visible input lag, horizontal overflow, long-task regression in the catalog, or animation-induced layout shift.
+- [x] Remove authenticated workspace inventory from the public sitemap.
+- [x] Apply `noindex,follow` to account and authorization pages.
+- [x] Disallow crawl-waste API/account paths in robots while preserving agent-discovery metadata.
+- [x] Publish explicit service boundaries: no ranking/citation/virality guarantees; no unapproved publishing; no access-control circumvention; public or authorized data only.
+- [x] Add automated tests for product inventory, route publication, sitemap coverage, and discovery controls.
+
+## Phase 4 — release verification
+
+- [x] ESLint.
+- [x] TypeScript.
+- [x] Vitest.
+- [x] Next.js production build.
+- [x] Push and deploy each public product slice.
+- [ ] Verify the latest SEO follow-up deployment and production responses.
+
+## Operational prerequisites before accepting automated work
+
+### Search Systems
+- Configure first-party Search Console/Analytics access and a supported keyword/SERP provider per client.
+- Define signed scope, implementation ownership, and reporting cadence.
+
+### Short-Form Studio
+- Provide an OpenShorts API credential or separately licensed processing infrastructure.
+- Configure durable client/job storage, monthly plan entitlements, source rights attestations, and publishing authorizations.
+
+### Deck Studio
+- Deploy a tenant-scoped Presenton service or configure an approved presentation API.
+- Configure model/image providers, document retention, export validation, and client brand assets.
+
+### Data Operations
+- Deploy isolated Scrapling workers with scheduler, durable storage, strict egress controls, DNS rebinding/SSRF defenses, source allowlists, per-tenant quotas, audit logs, and export delivery.
+- Require documented public-source authorization, robots/terms assessment, privacy basis, retention, and deletion policy for every job.
+
+## Stop condition
+
+Do not label any public service as automated, self-serve, paid, or operational until its corresponding authenticated intake, storage, provider credentials, metering, processing, review, and delivery path have been exercised end to end with a real tenant.

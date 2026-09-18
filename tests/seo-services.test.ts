@@ -4,7 +4,7 @@ import sitemap from '../app/sitemap'
 
 describe('SEO service pages', () => {
   it('uses unique service slugs, primary keywords, and metadata', () => {
-    expect(seoServices.length).toBeGreaterThanOrEqual(10)
+    expect(seoServices.length).toBeGreaterThanOrEqual(13)
     expect(new Set(seoServices.map((service) => service.slug)).size).toBe(seoServices.length)
     expect(new Set(seoServices.map((service) => service.primaryKeyword)).size).toBe(seoServices.length)
     for (const service of seoServices) {

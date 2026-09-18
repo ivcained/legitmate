@@ -1,47 +1,12 @@
-## 2026-09-15 — transitions.dev motion integration
-- Ran the requested Agency sequence: Trend Researcher, Feedback Synthesizer, then Sprint Prioritizer.
-- Confirmed the current transitions.dev CLI installs 32 free recipes, superseding the older 12-item README table.
-- Installed the full free recipe set under `transitions/` and added a 32-entry semantic registry with explicit active or honest dormant assignments.
-- Began Milestone 1 with shared motion tokens, reduced-motion overrides, and real commissioning/catalog/deployment adapters for text swap, panel reveal, checkbox, button loading, success, error, count, badge, and icon states.
-- A first commissioning Playwright run exposed an interaction-stability regression from animating the entire wizard panel; removed that broad animation and retained local state-boundary animation instead.
-- Verification after correction: 103 unit tests, TypeScript, ESLint, production build, desktop Playwright 4/4, instance Playwright 2/2, mobile Playwright 1/1.
 
-## 2026-09-10 — planning restart
-- Restored project context and checked planning-file prerequisites.
-- No `task_plan.md`, `findings.md`, or `progress.md` existed; created all three.
-- Verified repository remote/HEAD, green deployment workflow, public demo health, typecheck/build, and 14 passing unit tests.
-- Launched four parallel read-only specialist lanes: security architecture, workflow architecture, sprint prioritization, and UI/reality gate.
-- Agency router direct delegation returned `INTERRUPTED`; switched to Hermes `delegate_task` with the same specialist scopes rather than repeating the failed approach.
-- `graft map/ask` returned no project graph output in this checkout; continued with existing verified repository evidence and targeted source reads.
-- The first deployment run for `235ebe9` failed because a later uncommitted RED test was present in the live checkout while the deploy script was validating the earlier SHA; the subsequent `75bab5a` deployment completed successfully after that file became part of the commit. No code rollback was needed.
-- Installed supported `@privy-io/node` (the replacement for deprecated server-auth) and added server principal verification code plus tests. Production still needs `PRIVY_VERIFICATION_KEY` before Privy multi-user operations can be enabled.
-- Removed caller-controlled identity headers from instance listing/creation. Lifecycle and delete routes now verify a trusted principal and compare the upstream instance `user` to the tenant scope before mutation.
-- Reconciled all four specialist reports: Security Architect, Workflow Architect, Product/Sprint Prioritizer, and UI/Reality Gate.
-- Confirmed critical blockers: lifecycle action method bug, unsafe tenant/ownership model, missing server allowlists, metadata-only configuration, and red Playwright suite.
-- Adopted the no-new-database deadline architecture: canonical configuration + readback receipt on the Agent37 instance filesystem.
-- Current phase: Phase 1, fixing release blockers before configuration application.
-- Added failing lifecycle request-routing tests first; confirmed RED from missing module, then implemented `lib/agent-actions.ts` and reached GREEN (6/6 focused tests).
-- Fixed UI lifecycle requests to POST action routes for start/stop/restart/update/resize and DELETE only for deletion.
-- Moved Playwright to dedicated non-reused port 4310; updated stale permission interactions.
-- Diagnosed remaining E2E failure as non-reactive mutable lifecycle snapshot; added a revision tick in `act()` so transitions re-render and persist.
-- Final Phase 1 verification: 20 unit tests passed, 2 Playwright tests passed, typecheck passed, production build passed, `git diff --check` clean.
-- Current phase: Phase 2, server allowlists and canonical Agent37 configuration application.
-- Next: write RED tests for canonical configuration validation and fixed identity-file destinations.
-- Added canonical configuration validation under TDD: server allowlists Agency slugs, model aliases, and catalog-prefixed skills/plugins; rejects duplicates, excessive capabilities, unknown IDs, extra profile fields, NULs, oversized text, and caller paths; stable SHA-256 config IDs verified.
-- Added fixed Agent37 identity destinations and application/readback verification under TDD. The applicator polls Hermes health, writes canonical configuration + SOUL.md + USER.md + AGENTS.md, reads all four back, and rejects hash drift.
-- Added Privy server token verification via `@privy-io/node`; supports explicit verification key or authenticated JWKS retrieval with the configured Privy app secret.
-- Removed caller-controlled identity headers from instance listing/creation and added ownership verification to list/create/get/delete/lifecycle paths.
-- Closed the remaining privileged-route gaps: delete alias, chat, budget read/write, and signed URL minting now require authenticated ownership. Signed links are limited to approved Hermes/noVNC ports.
-- Production now rejects single-user auth mode, instance listings are post-filtered by owner, and foreign/nonexistent instance lookups share the same 404 boundary.
-- Added focused authorization regression coverage for every privileged route.
-- Verification at latest GREEN slice: 45 unit tests, 2 Playwright tests, typecheck, production build, and diff checks passed.
-- Wired `POST /api/agents/launch` to trusted authentication, canonical configuration parsing, owner-scoped reconciliation, Agent37 provisioning, fixed-path application, receipt commit, and verified response semantics.
-- Added protected `GET /api/agents/instances/[id]/configuration` readback with applied/drifted status.
-- The UI now sends the canonical profile contract with a stable retry request ID, gates controls on an applied receipt, and renders readback evidence with an explicit runtime-activation limitation.
-- Full local gate after integration: 45 unit tests, 2 Playwright tests, lint, typecheck, and production build passed.
-- Phase 2 released as commit `7795768`; GitHub deployment `34671842285` completed successfully and production `/api/health` returned `ok`.
-- Phase 2 release gate: 45 unit tests, 2 Playwright tests, lint, typecheck, production build, remote SHA, and live health passed. Transitive dependency exceptions remain documented.
-- Phase 3 started: real Agent37 execution proof plus a dedicated Frontend & User Simplicity review lane.
-- Added a protected, fixed-prompt Agent37 `/v1/responses` readiness proof with applied-configuration precondition, 15-second deadline, and idempotent replay in the active process.
-- Added one plain-language “Run safe test” UI that appears only after configuration readback succeeds; no prompt, tool, URL, or model override reaches the endpoint.
-- Phase 3 local gate: 50 unit tests, 2 Playwright tests, lint, typecheck, production build, and diff checks passed.
+## 2026-09-18 — Product service expansion and SEO/privacy gate
+- Audited OpenSEO at `b076099fe25568b2acd43b3a9ec8d30fc31653a2`, Presenton at `1d5458d8ff06e45c4d347d7f4d231426790aac7c`, OpenShorts at `27d4916ca74d29c3e2f86545a29dc2119e53c506`, and Scrapling at `9cafaa396fe301dce781599c99890e2ecdf2995f`.
+- Ran Agency specialist lanes for product strategy, SEO, visual design, pricing, privacy, security, compliance, and architecture across the new service lines.
+- Added a coherent product family: Agent Workspaces, Search Systems, Short-Form Studio, Deck Studio, and Data Operations.
+- Added public routes `/products`, `/seo-services` plus service children, `/short-form-video`, `/presentation-design`, and `/web-scraping-services` with unique metadata, canonical URLs, Service schema, responsive editorial branding, and sitemap coverage.
+- Added explicit no-guarantee, rights, privacy, retention, public-source, and access-control boundaries where applicable.
+- Verified a real Scrapling fetch against `https://example.com` in an isolated Python environment.
+- Closed technical SEO gaps found by the independent audit: account and authorization pages are `noindex,follow`; `/instances` was removed from the public sitemap; robots now disallows crawl waste under `/api/`, `/instances`, and `/authorize`; root metadata now reflects the full LegitClub product family.
+- Fixed the VPS deployment script to verify `.next/BUILD_ID`, preserve the running service during build, and fail promptly on a bad start. Deployment `35374312419` passed.
+- Release gates reached 123 passing Vitest tests, clean ESLint, clean TypeScript, and successful Next.js production builds.
+- Data Operations commit `cbce5e6` deployed successfully via run `35384230754`.

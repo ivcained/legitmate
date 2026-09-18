@@ -22,6 +22,15 @@ export const seoServices: SeoService[] = [
     questions: ['Can you work with our developers?', 'Will you implement the fixes?', 'How often should a technical audit run?'],
   },
   {
+    slug: 'seo-strategy', name: 'SEO Strategy & Project Setup', shortName: 'SEO strategy', primaryKeyword: 'SEO strategy services',
+    metaDescription: 'SEO strategy and project setup covering business context, markets, competitors, priority pages, measurement readiness, and an evidence-led roadmap.',
+    summary: 'Establish the commercial goal, markets, competitors, important pages, measurement access, and research sequence before spending effort on isolated tactics.',
+    outcome: 'A shared search brief and prioritized operating plan that connects technical, content, authority, measurement, and AI-visibility work.',
+    deliverables: ['Business, audience, offer, and market search brief', 'Baseline domain and measurement-readiness review', 'Competitor and key-page context map', 'Prioritized research and implementation sequence', 'Decision log and recommended next service'],
+    measures: ['Brief completeness', 'Measurement readiness', 'Roadmap ownership', 'Priority work completed'],
+    questions: ['What do you need before strategy starts?', 'Can you work from public data?', 'Does the strategy include implementation?'],
+  },
+  {
     slug: 'keyword-research', name: 'Keyword Research Services', shortName: 'Keyword research', primaryKeyword: 'keyword research services',
     metaDescription: 'Global keyword research grounded in search intent, SERP competition, difficulty, demand, CPC, and the pages your business can credibly rank.',
     summary: 'Map real search demand to offers, audience problems, markets, and pages instead of handing over a spreadsheet of disconnected phrases.',
