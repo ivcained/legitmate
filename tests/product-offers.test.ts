@@ -18,5 +18,6 @@ describe('LegitClub product family', () => {
     expect(urls.has('https://mate.legitclub.com/products')).toBe(true)
     expect(urls.has('https://mate.legitclub.com/presentation-design')).toBe(true)
     expect(urls.has('https://mate.legitclub.com/web-scraping-services')).toBe(true)
+    expect(urls.has('https://mate.legitclub.com/instances')).toBe(false)
   })
 })

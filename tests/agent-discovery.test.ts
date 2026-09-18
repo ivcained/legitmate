@@ -74,6 +74,8 @@ describe('agent discovery metadata', () => {
   it('declares content signals and the ARD manifest in robots.txt', () => {
     expect(ROBOTS_TEXT).toContain('Content-Signal: ai-train=no, search=yes, ai-input=yes')
     expect(ROBOTS_TEXT).toContain('Agentmap: https://mate.legitclub.com/.well-known/ai-catalog.json')
+    expect(ROBOTS_TEXT).toContain('Disallow: /api/')
+    expect(ROBOTS_TEXT).toContain('Disallow: /instances')
   })
 
   it('publishes sitemap entries referenced by robots.txt', () => {

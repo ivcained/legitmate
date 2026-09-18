@@ -25,6 +25,9 @@ Creating, changing, or deleting an Agent37 workspace requires the resource owner
 
 export const ROBOTS_TEXT = `User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /instances
+Disallow: /authorize
 Content-Signal: ai-train=no, search=yes, ai-input=yes
 
 Agentmap: ${SITE_ORIGIN}/.well-known/ai-catalog.json
