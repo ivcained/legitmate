@@ -34,11 +34,17 @@ npm run lint
 npm run typecheck
 npm test -- --run
 npm run build
-systemctl restart legitmate.service
+test -f .next/BUILD_ID
+systemctl stop legitmate.service
+systemctl start legitmate.service
 for i in $(seq 1 30); do
   if systemctl is-active --quiet legitmate.service && curl -fsS http://127.0.0.1:3200/api/health >/tmp/legitmate-health.json; then
     cat /tmp/legitmate-health.json
     exit 0
+  fi
+  if ! systemctl is-active --quiet legitmate.service; then
+    journalctl -u legitmate.service -n 80 --no-pager
+    exit 1
   fi
   sleep 2
 done
