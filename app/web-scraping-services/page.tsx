@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Managed Web Scraping & Data Extraction Services | LegitClub',
+  title: 'Managed Web Scraping & Data Extraction Services',
   description: 'Managed web scraping, structured data extraction, competitor and price monitoring, website-to-Markdown, and scheduled public web data feeds.',
   alternates: { canonical: 'https://mate.legitclub.com/web-scraping-services' },
   openGraph: { title: 'Data Operations by LegitClub', description: 'Approved public websites turned into maintained, structured data systems.', url: 'https://mate.legitclub.com/web-scraping-services', type: 'website' },
